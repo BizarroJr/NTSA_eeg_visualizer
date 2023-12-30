@@ -3,7 +3,7 @@ clc;
 close all;
 %% Define paths
 baseDirectory = "P:\WORK\David\UPF\TFM";
-visualizerDirectory = fullfile(baseDirectory, "eeg visualizator\");
+visualizerDirectory = fullfile(baseDirectory, "EEG_visualizer\");
 
 %% Data under analysis
 patientId = "11";
@@ -18,7 +18,7 @@ cd(visualizerDirectory);
 %% Main program
 
 % Customizable features
-secondsToVisualize = 30;
+secondsToVisualize = 30; % Set to inf if needed to see the whole recording
 plotColor = 'k';
 fontSize = 12;
 axisFontSize = 50;
@@ -43,6 +43,9 @@ h = figure;
 
 % Initialize variables
 samplesToVisualize = secondsToVisualize * fs;
+if(samplesToVisualize > N)
+    samplesToVisualize = N;
+end
 name_channel = channelNames;
 names = [];
 fs = 400;
