@@ -6,8 +6,10 @@ baseDirectory = "P:\WORK\David\UPF\TFM";
 visualizerDirectory = fullfile(baseDirectory, "EEG_visualizer\");
 
 %% Data under analysis
-patientId = "11";
-dataRecord = "003";
+% patientId = "11";
+% dataRecord = "003";
+patientId = "8";
+dataRecord = "057";
 
 %% Load data
 dataDirectory = fullfile(baseDirectory, "Data", "Seizure_Data_" + patientId);
@@ -73,15 +75,14 @@ coordinatesy = coordinatesy_(fullEeg, offsetY);
 
 %% DROPOUT DETECTOR SANDBOX
 
-testSignal = fullEeg(1, :);
 thresholdValue = 1.5;
-consecutiveThreshold = 10;
+consecutiveThreshold = 20;
 maxDropouts = 0; 
-maxDropoutsInfo = '';
+maxDropoutsInfo = 'No droputs have been found';
 
 for i = 1:totalChannels
     [dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = ...
-        dropout_detector(fullEeg(i, :), thresholdValue, consecutiveThreshold, fs, i, false);
+        dropout_detector(fullEeg(i, :), thresholdValue, consecutiveThreshold, fs, i, true);
 
     % Check if the current channel has more dropouts than the previous maximum
     if dropoutCount > maxDropouts
@@ -92,6 +93,12 @@ for i = 1:totalChannels
 end
 disp('********************************************');
 disp(maxDropoutsInfo);
+
+testChannel = 8;
+testSignal = fullEeg(testChannel, :);
+
+[dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = ...
+        dropout_detector(testSignal, thresholdValue, consecutiveThreshold, fs, testChannel, false);
 
 % Plot the original signal with dropouts highlighted
 figure;

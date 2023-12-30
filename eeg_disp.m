@@ -6,8 +6,8 @@ baseDirectory = "P:\WORK\David\UPF\TFM";
 visualizerDirectory = fullfile(baseDirectory, "EEG_visualizer\");
 
 %% Data under analysis
-patientId = "11";
-dataRecord = "003";
+patientId = "8";
+dataRecord = "008";
 
 %% Load data
 dataDirectory = fullfile(baseDirectory, "Data", "Seizure_Data_" + patientId);
@@ -70,6 +70,27 @@ all = 0;
 save = [-1, -1];
 amplifyY = false;
 coordinatesy = coordinatesy_(fullEeg, offsetY);
+
+% Artifact search
+
+thresholdValue = 1.5;
+consecutiveThreshold = 20;
+maxDropouts = 0; 
+maxDropoutsInfo = 'No dropouts have been found';
+
+for i = 1:totalChannels
+    [dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = ...
+        dropout_detector(fullEeg(i, :), thresholdValue, consecutiveThreshold, fs, i, false);
+
+    % Check if the current channel has more dropouts than the previous maximum
+    if dropoutCount > maxDropouts
+        maxDropouts = dropoutCount;
+        maxDropoutsChannel = i;
+        maxDropoutsInfo = dropoutInfo;
+    end
+end
+disp('********************************************');
+disp(maxDropoutsInfo);
 
 while fig == 0
     if ishandle(1) == 0

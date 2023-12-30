@@ -42,14 +42,28 @@ function [dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = dropout_de
         channel = NaN;
     end
 
-    % Step 1: Identify samples near 0
+    % Identify samples near 0
     nearZeroIndices = find(abs(signal) < thresholdValue);
     
-    % Step 2: Identify consecutive samples
+    % Identify consecutive samples
     consecutiveGroups = split_consecutive(nearZeroIndices);
     
     % Filter out false positives
     validDropoutGroups = consecutiveGroups(cellfun(@numel, consecutiveGroups) >= consecutiveThreshold);
+    
+    % Check if any dropout groups are found
+    if isempty(validDropoutGroups)
+        dropoutIndices = [];
+        dropoutGroups = {};
+        dropoutCount = 0;
+        dropoutInfo = ['A total of ', num2str(dropoutCount), ' possible dropouts has been found in Channel ', num2str(channel), newline];
+        
+        % Display or return the dropout information based on the verbose parameter
+        if verbose
+            disp(dropoutInfo);
+        end
+        return;
+    end
     
     % Obtain indices of dropouts
     dropoutIndices = cat(2, validDropoutGroups{:});
