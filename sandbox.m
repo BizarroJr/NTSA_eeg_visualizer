@@ -6,10 +6,10 @@ baseDirectory = "P:\WORK\David\UPF\TFM";
 visualizerDirectory = fullfile(baseDirectory, "EEG_visualizer\");
 
 %% Data under analysis
-% patientId = "11";
-% dataRecord = "003";
-patientId = "8";
-dataRecord = "057";
+patientId = "11";
+dataRecord = "003";
+% patientId = "8";
+% dataRecord = "057";
 
 %% Load data
 dataDirectory = fullfile(baseDirectory, "Data", "Seizure_Data_" + patientId);
@@ -74,30 +74,49 @@ amplifyY = false;
 coordinatesy = coordinatesy_(fullEeg, offsetY);
 
 %% DROPOUT DETECTOR SANDBOX
+% V2
+% 
+% D = deepSignalAnomalyDetector(totalChannels);
+% opts = trainingOptions("adam",MaxEpochs=100);
+% trainDetector(D,fullEeg(1,:),opts)
+% [lbls,loss] = detect(D,fullEeg(14,:));
 
+% V1
 thresholdValue = 1.5;
 consecutiveThreshold = 20;
 maxDropouts = 0; 
 maxDropoutsInfo = 'No droputs have been found';
+maxDropoutsDurations = [];
+totalDropoutTime = 0;
+dropoutPercentage = 0;
 
 for i = 1:totalChannels
-    [dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = ...
-        dropout_detector(fullEeg(i, :), thresholdValue, consecutiveThreshold, fs, i, true);
+    [dropoutIndices, dropoutGroups, dropoutCount, dropoutDurations, dropoutInfo] = ...
+        dropout_detector(fullEeg(i, :), thresholdValue, consecutiveThreshold, fs, i, false);
 
     % Check if the current channel has more dropouts than the previous maximum
     if dropoutCount > maxDropouts
         maxDropouts = dropoutCount;
         maxDropoutsChannel = i;
+        maxDropoutsDurations = dropoutDurations;
         maxDropoutsInfo = dropoutInfo;
+        totalDropoutTime = totalDropoutTime + sum(dropoutDurations);
+        dropoutPercentage = (totalDropoutTime / (N/fs)) * 100;
     end
 end
+
+% Add the total dropout time information to maxDropoutsInfo
+maxDropoutsInfo = [maxDropoutsInfo, sprintf('\nTotal Dropout Time: %.2f seconds (%.2f%%)', totalDropoutTime, dropoutPercentage)];
+% Display the information
 disp('********************************************');
 disp(maxDropoutsInfo);
 
+
+%% Plot test
 testChannel = 8;
 testSignal = fullEeg(testChannel, :);
 
-[dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = ...
+[dropoutIndices, dropoutGroups, dropoutCount, dropoutDurations, dropoutInfo] = ...
         dropout_detector(testSignal, thresholdValue, consecutiveThreshold, fs, testChannel, false);
 
 % Plot the original signal with dropouts highlighted

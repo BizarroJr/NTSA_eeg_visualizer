@@ -29,11 +29,12 @@
 %   - dropoutIndices: Indices of the identified dropout regions in the EEG signal.
 %   - dropoutGroups: Cell array containing indices of each identified dropout group.
 %   - dropoutCount: Total number of identified dropout regions.
+%   - dropoutDurations: Cell array containing the duration of each dropout.
 %   - dropoutInfo: Formatted string containing dropout information.
 %
 %--------------------------------------------------------------------------
 
-function [dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = dropout_detector(signal, thresholdValue, consecutiveThreshold, fs, channel, verbose) 
+function [dropoutIndices, dropoutGroups, dropoutCount, dropoutDurations, dropoutInfo] = dropout_detector(signal, thresholdValue, consecutiveThreshold, fs, channel, verbose) 
     % Set default values for optional parameters if not provided
     if nargin < 6
         verbose = true;
@@ -56,6 +57,7 @@ function [dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = dropout_de
         dropoutIndices = [];
         dropoutGroups = {};
         dropoutCount = 0;
+        dropoutDurations = [];
         dropoutInfo = ['A total of ', num2str(dropoutCount), ' possible dropouts has been found in Channel ', num2str(channel), newline];
         
         % Display or return the dropout information based on the verbose parameter

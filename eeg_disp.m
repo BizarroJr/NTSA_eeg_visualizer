@@ -6,8 +6,8 @@ baseDirectory = "P:\WORK\David\UPF\TFM";
 visualizerDirectory = fullfile(baseDirectory, "EEG_visualizer\");
 
 %% Data under analysis
-patientId = "8";
-dataRecord = "008";
+patientId = "11";
+dataRecord = "003 ";
 
 %% Load data
 dataDirectory = fullfile(baseDirectory, "Data", "Seizure_Data_" + patientId);
@@ -71,26 +71,70 @@ save = [-1, -1];
 amplifyY = false;
 coordinatesy = coordinatesy_(fullEeg, offsetY);
 
-% Artifact search
+%% Artifact search
 
 thresholdValue = 1.5;
 consecutiveThreshold = 20;
 maxDropouts = 0; 
-maxDropoutsInfo = 'No dropouts have been found';
+maxDropoutsInfo = 'No droputs have been found';
+maxDropoutsDurations = [];
+totalDropoutTime = 0;
+dropoutPercentage = 0;
 
 for i = 1:totalChannels
-    [dropoutIndices, dropoutGroups, dropoutCount, dropoutInfo] = ...
+    [dropoutIndices, dropoutGroups, dropoutCount, dropoutDurations, dropoutInfo] = ...
         dropout_detector(fullEeg(i, :), thresholdValue, consecutiveThreshold, fs, i, false);
 
     % Check if the current channel has more dropouts than the previous maximum
     if dropoutCount > maxDropouts
         maxDropouts = dropoutCount;
         maxDropoutsChannel = i;
+        maxDropoutsDurations = dropoutDurations;
         maxDropoutsInfo = dropoutInfo;
+        totalDropoutTime = totalDropoutTime + sum(dropoutDurations);
+        dropoutPercentage = (totalDropoutTime / (N/fs)) * 100;
     end
 end
+
+% Add the total dropout time information to maxDropoutsInfo
+maxDropoutsInfo = [maxDropoutsInfo, sprintf('\nTotal Dropout Time: %.2f seconds (%.2f%%)', totalDropoutTime, dropoutPercentage)];
+% Display the information
 disp('********************************************');
 disp(maxDropoutsInfo);
+
+%% KEYBOARD SHORTCUTS
+
+%--------------------------------------------------------------------------
+% KEYBOARD SHORTCUTS
+%--------------------------------------------------------------------------
+%   - Right Arrow (Button 29):
+%     - Moves the display to the right by plotting the next segment.
+%
+%   - Left Arrow (Button 28):
+%     - Moves the display to the left by plotting the previous segment.
+%
+%   - Up Arrow (Button 30):
+%     - Zooms in on the display by plotting a shorter time interval.
+%
+%   - Down Arrow (Button 31):
+%     - Zooms out on the display by plotting a longer time interval.
+%
+%   - Plus Key (+) (Button 43):
+%     - Increases the amplitude of the EEG signal.
+%
+%   - Minus Key (-) (Button 45):
+%     - Decreases the amplitude of the EEG signal.
+%
+%   - I Key (105):
+%     - Eliminates the y-axis limit, allowing the plot to auto-scale.
+%
+%   - C Key (99):
+%     - Plots the complete EEG signal.
+%
+%   - P Key (112) + Left Mouse Click:
+%     - Plots the periodogram of the selected channel.
+%
+%--------------------------------------------------------------------------
 
 while fig == 0
     if ishandle(1) == 0
@@ -100,7 +144,7 @@ while fig == 0
     [x, y, button] = ginput(1)
 
     switch button
-    case 1
+    case 1 % Cursor click
         save(end + 1) = y;
         if save(end - 1) ~= -1 && ~amplifyY && save(end - 1) ~= -3
             amplifyY = true;
@@ -113,7 +157,7 @@ while fig == 0
         end
         if save(end - 1) == -3 && ~amplifyY
             [eegnuevo, channel1, channel2] = canalesy(fullEeg, 0, save(end), coordinatesy);
-%             periodogram(eeg1(channel2, :));
+            % periodogram(eeg1(channel2, :));
             [p, f] = periodogram(fullEeg(channel2, :), [], [], fs);
             plot(f,log(p))
             xlim('tight')
@@ -192,7 +236,7 @@ while fig == 0
             all = 0;
         end
 
-    case 30 % Zoom in
+    case 30 % Zoom in (Up arrow)
         save(end + 1) = -1;
         if length(time__) < 2000
             disp('Limit of zoom in has been reached');
@@ -214,7 +258,7 @@ while fig == 0
             end
         end
 
-    case 31 % Zoom out
+    case 31 % Zoom out (Down arrow)
         save(end + 1) = -1;
         [eegToShow, time_] = actualizar_new(offsetedEeg, time, time__, -1000, 1000);
         time__ = time_;
@@ -231,7 +275,7 @@ while fig == 0
             set(gca, 'Ytick', yTickSpacing:yTickSpacing:yTickSpacing * totalChannels, 'Yticklabel', name_channel, 'Fontsize', fontSize);
         end
         
-    case 43
+    case 43 % Increase amplitude (+)
         save(end+1)=-1;
         [fullEeg,eeg_new,eeg_plotear]=ampliar_amplitud(fullEeg,time,time__,1.5);
         offsetedEeg=eeg_new;
@@ -247,7 +291,8 @@ while fig == 0
         if amplifyY==false
                set(gca, 'Ytick', [yTickSpacing:yTickSpacing:yTickSpacing*totalChannels],'Yticklabel',name_channel,'Fontsize',fontSize);
         end
-    case 45
+
+    case 45 % Decrease amplitude (-)
         save(end+1)=-1;
         [fullEeg,eeg_new,eeg_plotear]=ampliar_amplitud(fullEeg,time,time__,0.5);
         offsetedEeg=eeg_new;
@@ -263,28 +308,14 @@ while fig == 0
         if amplifyY==false
                set(gca, 'Ytick', [yTickSpacing:yTickSpacing:yTickSpacing*totalChannels],'Yticklabel',name_channel,'Fontsize',fontSize);
         end
-    case 105
-        amplifyY=false;
-        save(end+1)=-1;
-        [eeg_plotear,time__]=actualizar_new(offset(eeg1_),time,time__,-1,0);
-        offsetedEeg=offset(eeg1_);
-        fullEeg=eeg1_;
-        fullEeg=filter_(fullEeg,400);
-        plot(time__,eeg_plotear, plotColor)
-        title('Patient ' + patientId + ', seizure ' + dataRecord);
-        xlabel(xlabelText,'FontSize',axisFontSize)
-        ylabel(ylabelText,'FontSize',axisFontSize)
-        ylim([ 0 max(max(eeg_plotear))+500]);
-        xlim([time__(1) time__(length(time__))]);
-        
-        if amplifyY==true
-               set(gca, 'Ytick', [yTickSpacing:yTickSpacing:yTickSpacing*totalChannels],'Yticklabel',name_channel(channel1:channel2),'Fontsize',fontSize);
-        end
-        if amplifyY==false
-               set(gca, 'Ytick', [yTickSpacing:yTickSpacing:yTickSpacing*totalChannels],'Yticklabel',name_channel,'Fontsize',fontSize);
-        end
-        
-    case 99
+
+    case 105 % Eliminate the ylim (I)
+            if amplifyY==true
+                amplifyY=false;
+                ylim([ 0 max(max(offsetedEeg))+500]); %The new ylim is setted
+            end
+    
+    case 99 % Plot the complete EEG (C)
         save(end+1)=-1;
         all=1;
         plot(time,offsetedEeg)
@@ -299,7 +330,7 @@ while fig == 0
         if amplifyY==false
                set(gca, 'Ytick', [yTickSpacing:yTickSpacing:yTickSpacing*totalChannels],'Yticklabel',name_channel,'Fontsize',fontSize);
         end
-    case 112 %periodogram
+        case 112 % Plot periodogram (P + Click on desired channel)
         save(end+1)=-3;
             
     end
