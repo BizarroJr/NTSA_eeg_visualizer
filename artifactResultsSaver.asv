@@ -26,24 +26,15 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
     
     % Get information about '.mat' files in the folder
     matFilesInfo = dir(fullfile(dataDirectory, '*.mat'));
-
-    % Extract numbers from filenames
-    fileNumbers = sscanf([matFilesInfo.name], 'Seizure_%d.mat');
-    numMatFiles = max(fileNumbers);
-
+    
+    % Get the number of '.mat' files
+    numMatFiles = length(matFilesInfo);
     finalArtifactsResults = zeros(numMatFiles, 4); % We collect time, maxDropouts, totalDropoutTime, dropoutPercentage
     totalDropoutAffectedRecordings = 0;
-    totalMissingFiles = 0;
     
     for record = 1:numMatFiles
         cd(dataDirectory);
-        try
-            fullEeg = load(sprintf('Seizure_%03d.mat', record));
-        catch
-            totalMissingFiles = totalMissingFiles + 1;
-            warning(['File ', record, ' does not exist. Skipping to the next iteration.']);
-            continue;  % Skips to the next iteration of the loop
-        end
+        fullEeg = load(sprintf('Seizure_%03d.mat', record));
         cd(visualizerDirectory); % Changes back to where code is
     
         fullEeg = fullEeg.data';
@@ -67,9 +58,7 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
     end
     
     % Construct the filename based on patientId
-    disp('*****************************************************************')
-    disp(['Total affected files: ', num2str(totalDropoutAffectedRecordings), ' out of ', num2str(numMatFiles-totalMissingFiles), ' (', num2str((totalDropoutAffectedRecordings/numMatFiles)*100), '%)']);
-    disp(['Number of missing files: ', num2str(totalMissingFiles)]);
+disp(['Total affected files: ', num2str(totalDropoutAffectedRecordings), ' out of ', num2str(numMatFiles), ' (', num2str((totalDropoutAffectedRecordings/numMatFiles)*100), '%)']);
     filename = sprintf('Dropouts_of_Patient_%d.xlsx', str2double(patientId));
     cd(dataDirectory);
     
