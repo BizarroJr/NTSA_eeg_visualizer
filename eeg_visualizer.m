@@ -71,6 +71,9 @@ end
 %   - S Key (Button 115):
 %     - Saves all the artifacts found in the patient. (Dropouts)
 %
+%   - V Key (Button 118):
+%     - Computes Phase Variability Measures. (V, M, S)
+%
 %--------------------------------------------------------------------------
 %% Intialize visualizer
 

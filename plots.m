@@ -9,10 +9,14 @@ for i = 1:totalChannels
     channelNames{i} = ['ch' num2str(i, '%02d')];
 end
 
-
 plotColor = "black";
 axisFontSize = 50;
 channelNameFontSize = 12;
+interpreter = 'latex';
+
+set(groot,'defaultAxesTickLabelInterpreter',interpreter);
+set(groot,'defaulttextinterpreter',interpreter);
+set(groot,'defaultLegendInterpreter',interpreter);
 
 hold off
 plot(time,eeg,'Color', plotColor);
@@ -24,7 +28,7 @@ title('Seizure number '+string(seizure)+' from patient '+string(patient))
 if num==1
     limits=varargin{1};
     ylim([ limits(0)  limits(1)])
-elseif ((num==2) || (num==3))    
+elseif ((num==2) || (num==3))
     tstart=varargin{1}; %The times in which the dropout starts
     tend=varargin{2}; %The times in which the dropout finishes
     locStart=ismember(time,tstart); %The locations of these times in the current window are searched

@@ -44,40 +44,27 @@ function DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, totalWindows, chann
     end
     
     figure;
+
+    interpreter = 'latex';
+    titlesFontSize = 16;
+    axisFontWeight = 'bold'; 
+
+    set(groot,'defaultAxesTickLabelInterpreter',interpreter); 
+    set(groot,'defaulttextinterpreter',interpreter);
+    set(groot,'defaultLegendInterpreter',interpreter);
+    
     imagesc(tickPositions, 1:totalChannels, channelsMetrics);
-    xlabel('Time (s)');
-    ylabel('Channel');
+    xlabel('Time (s)', 'Interpreter', interpreter, 'FontWeight', axisFontWeight, 'FontSize', titlesFontSize);
+    ylabel('Channel', 'Interpreter', interpreter, 'FontWeight', axisFontWeight, 'FontSize', titlesFontSize);
     yticks(1:totalChannels);
     yticklabels(nameChannel);
     set(gca, 'XTick', tickPositions, 'XTickLabel', tickLabels);
     cbar = colorbar;
-    cbar.Label.String = metricToPlot; 
-    title(['Heatmap of ', metricToPlot]);
+    cbar.Label.String = metricToPlot;
+    cbar.Label.FontSize = titlesFontSize;
+    cbar.Label.Interpreter = interpreter;
+    set(cbar, 'TickLabelInterpreter', interpreter);
+    title(['Heatmap of ', metricToPlot], 'Interpreter', interpreter, 'FontWeight', axisFontWeight, 'FontSize', titlesFontSize);
     colormap('hot');
-    
-    
-    % % Plot channelsV
-    % figure;
-    % subplot(3,1,1);
-    % plot(tickPositions, channelsV');
-    % title('ChannelsV');
-    % xlabel('Time (s)');
-    % ylabel('Metric Value (a.u.)');
-    % set(gca, 'XTick', tickPositions);
-    %
-    % % Plot channelsM
-    % subplot(3,1,2);
-    % plot(tickPositions, channelsM');
-    % title('ChannelsM');
-    % xlabel('Time (s)');
-    % ylabel('Metric Value (a.u.)');
-    % set(gca, 'XTick', tickPositions);
-    %
-    % % Plot channelsS
-    % subplot(3,1,3);
-    % plot(tickPositions, channelsS');
-    % title('ChannelsS');
-    % xlabel('Time (s)');
-    % ylabel('Metric Value (a.u.)');
-    % set(gca, 'XTick', tickPositions);
+
 end
