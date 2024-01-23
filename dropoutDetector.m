@@ -1,4 +1,24 @@
-function [averagedDropoutStartingPoints, averagedDropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs, verbose)
+%--------------------------------------------------------------------------
+% dropoutDetector: Detect and analyze dropouts in EEG data.
+%--------------------------------------------------------------------------
+% DESCRIPTION:
+%   This function scans EEG data from multiple channels, detects dropouts,
+%   and performs analysis to provide information about dropout patterns.
+%
+% INPUTS:
+%   - fullEeg: Matrix containing EEG data, where each row represents a channel.
+%   - fs: Sampling frequency of the EEG signal.
+%   - verbose: Flag to enable/disable verbose output (optional, default is true).
+%
+% OUTPUTS:
+%   - averagedDropoutStartingPointsMatrix: Matrix containing averaged dropout starting points.
+%   - averagedDropoutEndingPointsMatrix: Matrix containing averaged dropout ending points.
+%   - totalDropouts: Total number of dropouts detected across all channels.
+%   - totalDropoutTime: Total time in seconds occupied by dropouts.
+%   - dropoutRatio: Percentage of dropout samples in the whole signal.
+%--------------------------------------------------------------------------
+
+function [averagedDropoutStartingPointsMatrix, averagedDropoutEndingPointsMatrix, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs, verbose)
     if nargin < 3
         verbose = true;
     end
@@ -65,6 +85,12 @@ function [averagedDropoutStartingPoints, averagedDropoutEndingPoints, totalDropo
 
     averagedDropoutStartingPoints = round(mean(cell2mat(filteredDropoutStarts), 2)); 
     averagedDropoutEndingPoints = round(mean(cell2mat(filteredDropoutEnds), 2));  
+
+    % Conversion for compatibility purposes with EEG visor
+    
+    averagedDropoutStartingPointsMatrix = repmat(averagedDropoutStartingPoints', totalChannels, 1) / fs; 
+    averagedDropoutEndingPointsMatrix = repmat(averagedDropoutEndingPoints', totalChannels, 1) / fs; 
+
     totalDropoutSamples = 0;
     for i = 1:maxDropoutNum
         totalDropoutSamples = totalDropoutSamples + (averagedDropoutEndingPoints(i,1) - averagedDropoutStartingPoints(i,1));

@@ -50,7 +50,8 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
         time=[0:1/fs:(1/fs)*(length(fullEeg(1,:))-1)];
         verbose = false;
     
-        [dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = detectAndCalculateDropouts(fullEeg, time, fs, verbose);
+        %[dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = detectAndCalculateDropouts(fullEeg, time, fs, verbose);
+        [dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs, verbose);
         disp(['Seizure: ', num2str(record), ', Total Dropouts: ', num2str(totalDropouts), ', Total Dropout Time: ', num2str(totalDropoutTime), ', Dropout Ratio: ', num2str(dropoutRatio)]);
 
         if totalDropouts > 0
@@ -70,7 +71,7 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
     disp('*****************************************************************')
     disp(['Total affected files: ', num2str(totalDropoutAffectedRecordings), ' out of ', num2str(numMatFiles-totalMissingFiles), ' (', num2str((totalDropoutAffectedRecordings/numMatFiles)*100), '%)']);
     disp(['Number of missing files: ', num2str(totalMissingFiles)]);
-    filename = sprintf('Dropouts_of_Patient_%d.xlsx', str2double(patientId));
+    filename = sprintf('Dropouts_of_Patient_%d_V2.xlsx', str2double(patientId));
     cd(dataDirectory);
     
     % Save the matrix to the Excel file

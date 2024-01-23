@@ -15,11 +15,13 @@ switch user
         baseDirectory = ""; % Directory containing the data and visualizer directory
         visualizerDirectory = pwd; % Directory containing the code for this visualizer (current folder)
         dataDirectory = pwd; % Directory containing the patient data (current folder)
+        metricsAndMeasuresDirectory = visualizerDirectory + "Metrics_and_measures";
     case 'David'
         % This configuration assumes a main folder which has one code folder and
         % one data folder
         baseDirectory = "P:\WORK\David\UPF\TFM";
         visualizerDirectory = fullfile(baseDirectory, "EEG_visualizer\");
+        metricsAndMeasuresDirectory = visualizerDirectory + "Metrics_and_measures";
 
         % Load data
         dataDirectory = fullfile(baseDirectory, "Data", "Seizure_Data_" + patientId);
@@ -325,7 +327,8 @@ while fig==0
         case 100 % In case that we want to see the dropouts and a report about them (D)
             dropouts = true;
             verbose = true;
-            [dropoutStartingPoints, dropoutEndingPoints] = detectAndCalculateDropouts(eegFull, time, fs, verbose);
+            %[dropoutStartingPoints, dropoutEndingPoints] = detectAndCalculateDropouts(eegFull, time, fs, verbose);
+            [dropoutStartingPoints, dropoutEndingPoints] = dropoutDetector(eegFull, fs, verbose);
            
             %The plot with the dropouts is generated
             if dropouts==false
@@ -364,6 +367,29 @@ while fig==0
 
         case 115 % Save the artifacts for all the recordings of the patient (S)
             artifactResultsSaver(dataDirectory, visualizerDirectory, fs, patientId)
+
+        case 118 % Gather phase variability for each window (V)
+            cd(metricsAndMeasuresDirectory);
+            phaseVariabilityCellArray = cell(1, totalChannels);
+            windowSize = 20; % In seconds
+
+            for i=1:totalChannels
+                [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, eegFull(i, :), windowSize);
+                phaseVariabilityCellArray{i} = metrics;
+                if exist('channelsV', 'var') == 0
+                    channelsV = zeros(totalChannels, totalWindows);
+                    channelsM = zeros(totalChannels, totalWindows);
+                    channelsS = zeros(totalChannels, totalWindows);
+                end
+                channelsV(i, :) = metrics(1, :);
+                channelsM(i, :) = metrics(2, :);
+                channelsS(i, :) = metrics(3, :);
+            end
+            disp("Phase variability calculated for all channels!")
+            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, totalWindows, channelsV, "V")
+            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, totalWindows, channelsM, "M")
+            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, totalWindows, channelsS, "S")
+            cd(visualizerDirectory);
     end
 end
 
