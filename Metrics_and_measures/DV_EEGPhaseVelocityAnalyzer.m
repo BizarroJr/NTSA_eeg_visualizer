@@ -2,7 +2,8 @@ function [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, eegChannel, w
 
     windowSizeSamples = windowSizeSeconds * fs;
     numFullWindows = floor(length(eegChannel) / windowSizeSamples);
-    remainingSamples = mod(length(eegChannel), windowSizeSamples);
+    % remainingSamples = mod(length(eegChannel), windowSizeSamples);
+    remainingSamples = 0; % Kept to 0 to prevent last window from being less than the established window size
     totalWindows = numFullWindows + (remainingSamples > 0);
 
     % Create a cell array to store the windows and the matrix that will

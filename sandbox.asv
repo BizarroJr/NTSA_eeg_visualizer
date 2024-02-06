@@ -60,38 +60,34 @@ eegToShow= offsetedEeg(:, 1:samplesToVisualize);
 
 %% EEG UNWRAPPED & DETRENDED PHASE
 
-channelToVisualize = 1;
+channelToVisualize = 14;
 channelEeg = fullEeg(channelToVisualize, :);
 
 % Part of signal
 
-% time1 = 60;
-% time2 = 70;
-% startSample = time1*fs;
-% endSample = time2*fs;
-% samples=startSample:endSample;
-% time = linspace(time1, time2, length(samples));
-% 
-% uncutHilbertTransform = hilbert(channelEeg(samples));
-% phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
+time1 = 60;
+time2 = 70;
+startSample = time1*fs;
+endSample = time2*fs;
+samples=startSample:endSample;
+time = linnspace(time1, length(samples):time2;
+
+uncutHilbertTransform = hilbert(channelEeg(samples));
+phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
 
 % Full signal
 
-uncutHilbertTransform = hilbert(channelEeg);
-hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
-phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform)))) ;
+% uncutHilbertTransform = hilbert(channelEeg);
+% % hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
+% % phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform)))) ;
 % phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
-time = (1:length(channelEeg)) / fs;
+% time = (1:length(channelEeg)) / fs;
 
 figure;
-plot(real(uncutHilbertTransform), imag(uncutHilbertTransform))
-
-% figure;
-% plot(time, phaseUncut)
-% % plot(time, uncutHilbertTransform)
-% ylabel('Phase (radians)');
-% xlabel('Time (s)');
-% title(['Patient ' num2str(patientId) ', Recording ' num2str(dataRecord) ', Channel ' num2str(channelToVisualize)]);
+plot(time, phaseUncut)
+ylabel('Phase (radians)');
+xlabel('Time (s)');
+title(['Patient ' num2str(patientId) ', Recording ' num2str(dataRecord) ', Channel ' num2str(channelToVisualize)]);
 axis tight;
 
 %% FLATLINE DETECTOR

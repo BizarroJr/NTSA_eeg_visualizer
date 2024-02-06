@@ -17,7 +17,7 @@
 %--------------------------------------------------------------------------
 
 
-function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs, patientId)
+function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
 
     % Validate input parameters
     if fs <= 0
@@ -31,8 +31,9 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
     fileNumbers = sscanf([matFilesInfo.name], 'Seizure_%d.mat');
     numMatFiles = max(fileNumbers);
 
-    finalArtifactsResults = zeros(numMatFiles, 4); % We collect time, maxDropouts, totalDropoutTime, dropoutPercentage
+    finalArtifactsResults = zeros(numMatFiles, 5); % We collect time, maxDropouts, totalDropoutTime, dropoutPercentage, flatline
     totalDropoutAffectedRecordings = 0;
+    totalFlatlineAffectedRecordings = 0;
     totalMissingFiles = 0;
     
     for record = 1:numMatFiles
@@ -49,7 +50,8 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
         fullEeg = fullEeg.data';
         time=[0:1/fs:(1/fs)*(length(fullEeg(1,:))-1)];
         verbose = false;
-    
+        
+        % DROPOUTS
         %[dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = detectAndCalculateDropouts(fullEeg, time, fs, verbose);
         [dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs, verbose);
         disp(['Seizure: ', num2str(record), ', Total Dropouts: ', num2str(totalDropouts), ', Total Dropout Time: ', num2str(totalDropoutTime), ', Dropout Ratio: ', num2str(dropoutRatio)]);
@@ -60,22 +62,34 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
 
         % Check if ratio exceeds 1, set corresponding value to -1
         if dropoutRatio > 1
-            finalArtifactsResults(record, :) = -1;
+            finalArtifactsResults(record, 1:4) = -1;
             disp(["Bad result detected in recording: ", num2str(record)])
         else
-            finalArtifactsResults(record, :) = [length(fullEeg(1,:)) / fs, totalDropouts, totalDropoutTime, dropoutRatio];
+            finalArtifactsResults(record, 1:4) = [length(fullEeg(1,:)) / fs, totalDropouts, totalDropoutTime, dropoutRatio];
         end
+
+        % FLATLINES
+        [isFlatline, flatlineChannels] = flatlineDetector(fullEeg, fs, windowSizeSeconds, verbose);
+        if isFlatline
+            disp(['Flatline found on: ', num2str(flatlineChannels')]);
+            totalFlatlineAffectedRecordings = totalFlatlineAffectedRecordings + 1;
+        end
+        finalArtifactsResults(record, 5) = isFlatline;
+
+
     end
     
     % Construct the filename based on patientId
     disp('*****************************************************************')
-    disp(['Total affected files: ', num2str(totalDropoutAffectedRecordings), ' out of ', num2str(numMatFiles-totalMissingFiles), ' (', num2str((totalDropoutAffectedRecordings/numMatFiles)*100), '%)']);
+    disp(['Total dropout affected files: ', num2str(totalDropoutAffectedRecordings), ' out of ', num2str(numMatFiles-totalMissingFiles), ' (', num2str((totalDropoutAffectedRecordings/numMatFiles)*100), '%)']);
+    disp(['Total flatline affected files: ', num2str(totalFlatlineAffectedRecordings), ' out of ', num2str(numMatFiles-totalMissingFiles), ' (', num2str((totalFlatlineAffectedRecordings/numMatFiles)*100), '%)']);
     disp(['Number of missing files: ', num2str(totalMissingFiles)]);
-    filename = sprintf('Dropouts_of_Patient_%d_V2.xlsx', str2double(patientId));
+    filename = sprintf('Dropouts_of_Patient_%d_V3.xlsx', str2double(patientId));
     cd(dataDirectory);
     
     % Save the matrix to the Excel file
     writematrix(finalArtifactsResults, filename, 'Sheet', 'Results');
     disp(['Matrix saved to file: ', filename]);
+    cd(visualizerDirectory);
 end
 

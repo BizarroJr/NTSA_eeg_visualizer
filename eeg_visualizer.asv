@@ -4,9 +4,9 @@ close all;
 
 %% Data under analysis
 % patientId = "8";
-% seizure = "47";
+% seizure = "22";
 patientId = "11";
-seizure = "113";
+seizure = "2";
 user = "David"; % Change your name and define the way to load the eeg accordingly to your preferences
 
 %% Load recording
@@ -183,7 +183,7 @@ while fig==0
                     plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
                 end
             end
-
+ 
         case 30 % Zoom in (up arrow)
             save(end+1)=-1;
             maxZoomin=2000;
@@ -336,7 +336,7 @@ while fig==0
             %[dropoutStartingPoints, dropoutEndingPoints] = detectAndCalculateDropouts(eegFull, time, fs, verbose);
             [dropoutStartingPoints, dropoutEndingPoints] = dropoutDetector(eegFull, fs, verbose);
             isFlatline = flatlineDetector(eegFull, fs, windowSizeSeconds, verbose);
-
+           
             %The plot with the dropouts is generated
             if dropouts==false
                 if ampliary==true %In case that we are only plotting some channels
@@ -377,15 +377,13 @@ while fig==0
 
             for i = 1:totalChannels
                 uncutHilbertTransform = hilbert(eegFull(i, :));
-                %hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
-                hilbertTransform = uncutHilbertTransform;
-                % phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
-                phase = (atan2(imag(hilbertTransform), real(hilbertTransform)));
+                hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
+                %hilbertTransform = uncutHilbertTransform;
+                phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
                 eegPhases(i, :) = phase;
-            end
-            % cutTime = time(0.05*length(time):0.95*length(time));
-            % plots(offset(eegPhases), cutTime, patientId, seizure)
-            plots(offset(eegPhases), time, patientId, seizure)
+             end
+             cutTime = time(0.05*length(time):0.95*length(time));
+            plots(eegPhases, cutTime, patientId, seizure)
 
         case 115 % Save the artifacts for all the recordings of the patient (S)
             windowSizeSeconds = 10; % In seconds
@@ -394,7 +392,7 @@ while fig==0
         case 118 % Gather phase variability for each window (V)
             cd(metricsAndMeasuresDirectory);
             phaseVariabilityCellArray = cell(1, totalChannels);
-            windowSizeSeconds = 10; % In seconds
+            windowSizeSeconds = 20; % In seconds
 
             for i=1:totalChannels
                 [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, eegFull(i, :), windowSizeSeconds);

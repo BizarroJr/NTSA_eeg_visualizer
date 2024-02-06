@@ -11,7 +11,7 @@ end
 
 plotColor = "black";
 axisFontSize = 50;
-channelNameFontSize = 12;
+channelNameFontSize = 16;
 interpreter = 'latex';
 
 set(groot,'defaultAxesTickLabelInterpreter',interpreter);
