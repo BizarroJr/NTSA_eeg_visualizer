@@ -3,10 +3,12 @@ clc;
 close all;
 
 %% Data under analysis
+patientId = "11";
+seizure = "43";
 % patientId = "8";
 % seizure = "47";
-patientId = "11";
-seizure = "113";
+% patientId = "11";
+% seizure = "113";
 user = "David"; % Change your name and define the way to load the eeg accordingly to your preferences
 
 %% Load recording
@@ -87,7 +89,9 @@ eegFullOffset=offset(eegFull); %An offset is added to the signal
 timeWindow=20; % Total seconds to be visualized
 windowLength=timeWindow*fs; %Initial samples in the window
 
-[totalChannels, channelLength] = size(eegFull);
+[M, N] = size(eegFull);
+totalChannels = M;
+channelLength = N;
 nameChannel = cell(1, totalChannels);
 for i = 1:totalChannels
     nameChannel{i} = ['ch' num2str(i, '%02d')];
@@ -104,6 +108,27 @@ all=0; %Variable that states if the whole EEG is being plotted
 save=[-1,-1]; %List to save the state of the system
 ampliary=false;
 dropouts=false;
+
+%% Stuff for phase-based measures
+windowSizeSeconds = 10; % In seconds
+secondsToCut = 5;
+filterType = 1; % 1-LPF, 2-HPF
+
+filteredEegFullCentered = zeros(size(eegFull));
+eegPhases = zeros(totalChannels, channelLength - 2 * (secondsToCut * fs));
+eegPhasesPadded = zeros(size(eegFull));
+
+% Substract the mean to every channel
+channelMeans = mean(eegFull, 2);
+eegFullCentered = eegFull - channelMeans;
+
+% Filter the channels
+for i = 1:totalChannels
+    channelData = eegFullCentered(i, :);
+    filteredChannel = DV_BandPassFilter(channelData, fs, filterType);
+    filteredEegFullCentered(i, :) = filteredChannel;
+end
+
 while fig==0
     [x,y,button] = ginput(1);
     button
@@ -372,20 +397,40 @@ while fig==0
                 end
             end
 
-        case 102 % Display untrended unwrapped phase of signals (S)
-            %eegPhases = zeros(totalChannels, channelLength);
-
+        case 102 % Display untrended unwrapped phase of signals (F)
+          
             for i = 1:totalChannels
-                uncutHilbertTransform = hilbert(eegFull(i, :));
-                %hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
-                hilbertTransform = uncutHilbertTransform;
-                % phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
-                phase = (atan2(imag(hilbertTransform), real(hilbertTransform)));
+                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
+                startCutIndex = secondsToCut * fs;
+                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
+                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
+                phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
+                % phase = atan2(imag(hilbertTransform), real(hilbertTransform)); % Just the phase
                 eegPhases(i, :) = phase;
             end
-            % cutTime = time(0.05*length(time):0.95*length(time));
-            % plots(offset(eegPhases), cutTime, patientId, seizure)
-            plots(offset(eegPhases), time, patientId, seizure)
+            eegPhasesPadded(:, (secondsToCut * fs) + 1 : end - (secondsToCut * fs)) = eegPhases;
+            plots(offset(eegPhasesPadded), time, patientId, seizure)
+
+            % Extra plots
+
+            % Plot of Hilbert Transform "Attractor" to see if phase is well
+            % defined
+            figure;
+            plot(real(uncutHilbertTransform), imag(uncutHilbertTransform))
+            % plot(real(hilbertTransform), imag(hilbertTransform))
+            title('HT of Channel 1')
+            ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
+            xlabel('$\mathrm{Re}(X_H)$', 'Interpreter', 'latex');
+
+            figure;
+            signal = filteredEegFullCentered(1, :);
+            frequencies = (0:channelLength-1)*(fs/channelLength);
+            fft_signal = fft(signal);
+            plot(frequencies(1:channelLength/2), abs(fft_signal(1:channelLength/2)));
+            title('FFT of Channel 1')
+            xlabel('Frequency (Hz)');
+            ylabel('Magnitude');
+
 
         case 115 % Save the artifacts for all the recordings of the patient (S)
             windowSizeSeconds = 10; % In seconds
@@ -393,11 +438,13 @@ while fig==0
 
         case 118 % Gather phase variability for each window (V)
             cd(metricsAndMeasuresDirectory);
-            phaseVariabilityCellArray = cell(1, totalChannels);
-            windowSizeSeconds = 10; % In seconds
 
             for i=1:totalChannels
-                [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, eegFull(i, :), windowSizeSeconds);
+                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
+                startCutIndex = secondsToCut * fs;
+                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
+                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
+                [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, hilbertTransform(1, :), windowSizeSeconds);
                 phaseVariabilityCellArray{i} = metrics;
                 if exist('channelsV', 'var') == 0
                     channelsV = zeros(totalChannels, totalWindows);
@@ -412,7 +459,7 @@ while fig==0
             % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsV, "V")
             % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsM, "M")
             % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsS, "S")
-            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, {channelsV, channelsM, channelsS}, {'V', 'M', 'S'});
+            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, secondsToCut, totalWindows, {channelsV, channelsM, channelsS}, {'V', 'M', 'S'});
 
             cd(visualizerDirectory);
     end

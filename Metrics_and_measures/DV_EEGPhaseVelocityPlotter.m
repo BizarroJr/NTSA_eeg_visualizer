@@ -17,7 +17,7 @@
 %   Generates subplots with heatmaps for each specified metric and displays relevant information.
 %--------------------------------------------------------------------------
 
-function DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, totalWindows, metricMatrices, metricNames)
+function DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, secondsToCut, totalWindows, metricMatrices, metricNames)
 
 [M, N] = size(eegFull);
 totalChannels = M;
@@ -30,8 +30,8 @@ end
 nameChannel = flip(nameChannel);
 metricMatrices = cellfun(@(x) flip(x), metricMatrices, 'UniformOutput', false);
 
-totalTime = round(length(eegFull(1, :)) / fs);
-tickPositions = (0:windowSize:(totalWindows - 1) * windowSize);
+totalTime = round(length(eegFull(1, :)) / fs) - 2 * secondsToCut;
+tickPositions = (secondsToCut:windowSize:(totalTime + secondsToCut - windowSize));
 tickLabels = cell(1, length(tickPositions));
 
 for i = 1:length(tickPositions)

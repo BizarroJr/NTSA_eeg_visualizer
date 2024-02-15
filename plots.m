@@ -11,7 +11,7 @@ end
 
 plotColor = "black";
 axisFontSize = 50;
-channelNameFontSize = 16;
+channelNameFontSize = 12;
 interpreter = 'latex';
 
 set(groot,'defaultAxesTickLabelInterpreter',interpreter);
@@ -27,13 +27,13 @@ set(gca, 'Ytick', [900:900:900*16],'Yticklabel',channelNames,'Fontsize',channelN
 title('Seizure number '+string(seizure)+' from patient '+string(patient))
 if num==1
     limits=varargin{1};
-    ylim([ limits(0)  limits(1)])
+    ylim([ limits(1)  limits(2)])
 elseif ((num==2) || (num==3))
     tstart=varargin{1}; %The times in which the dropout starts
     tend=varargin{2}; %The times in which the dropout finishes
-    locStart=ismember(time,tstart); %The locations of these times in the current window are searched
+    locStart=ismember(time, tstart); %The locations of these times in the current window are searched
     timestoplotStart=time(locStart);
-    locEnd=ismember(time,tend); %The locations of these times in the current window are searched
+    locEnd=ismember(time, tend); %The locations of these times in the current window are searched
     timestoplotEnd=time(locEnd);
     if isempty(timestoplotStart)==false
         hold on
@@ -47,7 +47,7 @@ elseif ((num==2) || (num==3))
         ylim([ 0 max(max(eeg))+500])
     else
         limits=varargin{3};
-        ylim([ limits(0)  limits(1)])
+        ylim([ limits(1)  limits(2)])
     end
 else
     ylim([ 0 max(max(eeg))+500])

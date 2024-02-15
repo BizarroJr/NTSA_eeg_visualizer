@@ -30,7 +30,7 @@ function [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, eegChannel, w
     end
 
     for i = 1:totalWindows
-        [V, M, S] = EA_CoefPhaseVelVar(segments{i});
+        [V, M, S] = DV_PhaseBasedMeasures(segments{i});
         metrics(:, i) = [V, M, S];
     end
 end
