@@ -17,7 +17,8 @@
 %   Generates subplots with heatmaps for each specified metric and displays relevant information.
 %--------------------------------------------------------------------------
 
-function DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, secondsToCut, totalWindows, metricMatrices, metricNames)
+function DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, secondsToCut, ...
+    totalWindows, overlapSeconds, metricMatrices, metricNames)
 
 [M, N] = size(eegFull);
 totalChannels = M;
@@ -30,18 +31,13 @@ end
 nameChannel = flip(nameChannel);
 metricMatrices = cellfun(@(x) flip(x), metricMatrices, 'UniformOutput', false);
 
-totalTime = round(length(eegFull(1, :)) / fs) - 2 * secondsToCut;
-tickPositions = (secondsToCut:windowSize:(totalTime + secondsToCut - windowSize));
+stepSize = windowSize - overlapSeconds;
+windowStarts = (0:totalWindows-1) * stepSize;
+tickPositions = windowStarts + windowSize / 2;
 tickLabels = cell(1, length(tickPositions));
 
 for i = 1:length(tickPositions)
-    if i < length(tickPositions)
-        tickLabels{i} = [num2str(tickPositions(i)), ' - ', num2str(tickPositions(i + 1))];
-    else
-        % If last window is computed with less seconds than window size
-        % tickLabels{i} = [num2str(tickPositions(i)), ' - ', num2str(totalTime)];
-        tickLabels{i} = [num2str(tickPositions(i)), ' - ', num2str(tickPositions(i) + windowSize)];
-    end
+    tickLabels{i} = [num2str(tickPositions(i)), ' - ', num2str(tickPositions(i) + windowSize)];
 end
 
 figure;
@@ -73,16 +69,23 @@ for i = 1:numMetrics
     switch metricNames{i}
         case 'V'
             metricDescription = 'Phase Velocity Variability';
+            maxValue = 1.5;
+            minValue = 0.7;
         case 'M'
             metricDescription = 'Mean Phase Variability';
+            maxValue = 0.75;
+            minValue =  0.6;
         case 'S'
             metricDescription = 'Phase Velocity Std';
+            maxValue = 0.6;
+            minValue = 0.2;
         otherwise
             metricDescription = ''; % Default case
     end
 
     title([metricDescription, ' (', metricNames{i}, ')'], 'Interpreter', interpreter, 'FontWeight', axisFontWeight, 'FontSize', titlesFontSize);
     colormap('hot');
+    % clim(gca, [minValue, maxValue]);
 end
 
 end

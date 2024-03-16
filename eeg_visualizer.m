@@ -3,12 +3,14 @@ clc;
 close all;
 
 %% Data under analysis
-patientId = "11";
-seizure = "43";
-% patientId = "8";
-% seizure = "47";
 % patientId = "11";
 % seizure = "113";
+patientId = "8";
+seizure = "47";
+% patientId = "11";
+% seizure = "57";
+patientId = "11";
+seizure = "113";
 user = "David"; % Change your name and define the way to load the eeg accordingly to your preferences
 
 %% Load recording
@@ -111,8 +113,9 @@ dropouts=false;
 
 %% Stuff for phase-based measures
 windowSizeSeconds = 10; % In seconds
-secondsToCut = 5;
-filterType = 1; % 1-LPF, 2-HPF
+overlapSeconds = 3;
+secondsToCut = 0; % In seconds
+filterType = 0; % 0-No filter, 1-LPF, 2-HPF
 
 filteredEegFullCentered = zeros(size(eegFull));
 eegPhases = zeros(totalChannels, channelLength - 2 * (secondsToCut * fs));
@@ -131,8 +134,80 @@ end
 
 while fig==0
     [x,y,button] = ginput(1);
-    button
     switch button
+        case 102 % Display untrended unwrapped phase of signals (F)
+
+            for i = 1:totalChannels
+                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
+                startCutIndex = secondsToCut * fs;
+                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
+                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
+                phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
+                % phase = atan2(imag(hilbertTransform), real(hilbertTransform)); % Just the phase
+                eegPhases(i, :) = phase;
+            end
+            eegPhasesPadded(:, (secondsToCut * fs) + 1 : end - (secondsToCut * fs)) = eegPhases;
+            plots(offset(eegPhasesPadded), time, patientId, seizure)
+
+            % Extra plots
+
+            % Plot of Hilbert Transform "Attractor" to see if phase is well
+            % defined
+            % Plot only the segment of uncutHilbertTransform between
+            % timeStart and timeEnd
+            timeStart = 16;
+            timeEnd = 17;
+            startIndex = round(timeStart * fs);
+            endIndex = round(timeEnd * fs);
+            segmentHilbertTransform = uncutHilbertTransform(startIndex:endIndex);
+
+            figure;
+            plot(real(segmentHilbertTransform), imag(segmentHilbertTransform))
+            % plot(real(hilbertTransform), imag(hilbertTransform))
+            selectedChannel = 16;
+            title(['HT of Channel ' num2str(selectedChannel)]);
+            ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
+            xlabel('$\mathrm{Re}(X_H)$', 'Interpreter', 'latex');
+
+            % figure;
+            % signal = filteredEegFullCentered(selectedChannel, :);
+            % frequencies = (0:channelLength-1)*(fs/channelLength);
+            % fft_signal = fft(signal);
+            % plot(frequencies(1:channelLength/2), abs(fft_signal(1:channelLength/2)));
+            % title(['FFT of Channel ' num2str(selectedChannel)]);
+            % xlabel('Frequency (Hz)');
+            % ylabel('Magnitude');
+
+        case 118 % Gather phase variability for each window (V)
+            cd(metricsAndMeasuresDirectory);
+
+            for i=1:totalChannels
+                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
+                startCutIndex = secondsToCut * fs;
+                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
+                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
+                [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, hilbertTransform(1, :), windowSizeSeconds, overlapSeconds);
+                phaseVariabilityCellArray{i} = metrics;
+                if exist('channelsV', 'var') == 0
+                    channelsV = zeros(totalChannels, totalWindows);
+                    channelsM = zeros(totalChannels, totalWindows);
+                    channelsS = zeros(totalChannels, totalWindows);
+                end
+                channelsV(i, :) = metrics(1, :);
+                channelsM(i, :) = metrics(2, :);
+                channelsS(i, :) = metrics(3, :);
+            end
+            disp("Phase variability calculated for all channels!")
+            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsV, "V")
+            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsM, "M")
+            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsS, "S")
+            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, ...
+                secondsToCut, totalWindows, overlapSeconds, ...
+                {channelsV, channelsM, channelsS}, {'V', 'M', 'S'});
+            maxValues = max(metrics, [], 2);
+            minValues = min(metrics, [], 2);
+            cd(visualizerDirectory);
+
         case 1 % Cursor click
             save(end+1)=y;
             if save(end-1)~=-1 & ampliary==false & save(end-1)~=-3 %In case that we want to see only a part of the window (we need to click where we want the boundaries)
@@ -178,10 +253,10 @@ while fig==0
 
             else
                 if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                 end
                 if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                 end
             end
 
@@ -191,6 +266,7 @@ while fig==0
             if all==0
                 [eegWindowOffset,timeCurrentWindow]=actualizar_new(eegFullOffset,time,timeCurrentWindow,-round(length(timeCurrentWindow)/2),-round(length(timeCurrentWindow)/2),0);
             end
+
             %New window plot
             if dropouts==false
                 if ampliary==true %In case that we are only plotting some channels
@@ -202,10 +278,10 @@ while fig==0
 
             else
                 if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                 end
                 if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                 end
             end
 
@@ -229,10 +305,10 @@ while fig==0
 
                 else
                     if ampliary==true %In case that we are only plotting some channels
-                        plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                        plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                     end
                     if ampliary==false
-                        plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                        plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                     end
                 end
             end
@@ -252,10 +328,10 @@ while fig==0
 
             else
                 if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                 end
                 if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                 end
             end
 
@@ -273,10 +349,10 @@ while fig==0
 
             else
                 if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                 end
                 if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                 end
             end
 
@@ -293,10 +369,10 @@ while fig==0
                 end
             else
                 if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                 end
                 if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                 end
             end
 
@@ -320,10 +396,10 @@ while fig==0
 
             else
                 if ampliary==true %In case that we are only plotting some channels
-                    plots(eegFullOffset,time,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                    plots(eegFullOffset,time,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                 end
                 if ampliary==false
-                    plots(eegFullOffset,time,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                    plots(eegFullOffset,time,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                 end
             end
 
@@ -346,10 +422,10 @@ while fig==0
                 end
             else
                 if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
                 end
                 if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
+                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
                 end
             end
 
@@ -358,26 +434,32 @@ while fig==0
             verbose = true;
             windowSizeSeconds = 20;
 
-            %[dropoutStartingPoints, dropoutEndingPoints] = detectAndCalculateDropouts(eegFull, time, fs, verbose);
+            % [dropoutStartingPoints, dropoutEndingPoints] = detectAndCalculateDropouts(eegFull, time, fs, verbose);
             [dropoutStartingPoints, dropoutEndingPoints] = dropoutDetector(eegFull, fs, verbose);
+            [maximum,indexmaximum] = max(sum(dropoutStartingPoints,2));
             isFlatline = flatlineDetector(eegFull, fs, windowSizeSeconds, verbose);
 
             %The plot with the dropouts is generated
-            if dropouts==false
-                if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,[value1 value2]);
-                end
-                if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure);
-                end
-            else
-                if ampliary==true %In case that we are only plotting some channels
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints,[value1 value2]);
-                end
-                if ampliary==false
-                    plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints,dropoutEndingPoints);
-                end
+            % if dropouts==false
+            %     if ampliary==true %In case that we are only plotting some channels
+            %         plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,[value1 value2]);
+            %     end
+            %     if ampliary==false
+            %         plots(eegWindowOffset,timeCurrentWindow,patientId,seizure);
+            %     end
+            % else
+
+            if ampliary==true %In case that we are only plotting some channels
+                plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:),[value1 value2]);
             end
+            if ampliary==false
+                plots(eegWindowOffset,timeCurrentWindow,patientId,seizure,dropoutStartingPoints(indexmaximum,:),dropoutEndingPoints(indexmaximum,:));
+            end
+            % end
+
+        case 115 % Save the artifacts for all the recordings of the patient (S)
+            windowSizeSeconds = 10; % In seconds
+            artifactResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
 
         case 101 % Eliminate the dropouts in the plot (E)
             dropouts=false;
@@ -397,71 +479,6 @@ while fig==0
                 end
             end
 
-        case 102 % Display untrended unwrapped phase of signals (F)
-          
-            for i = 1:totalChannels
-                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
-                startCutIndex = secondsToCut * fs;
-                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
-                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
-                phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
-                % phase = atan2(imag(hilbertTransform), real(hilbertTransform)); % Just the phase
-                eegPhases(i, :) = phase;
-            end
-            eegPhasesPadded(:, (secondsToCut * fs) + 1 : end - (secondsToCut * fs)) = eegPhases;
-            plots(offset(eegPhasesPadded), time, patientId, seizure)
-
-            % Extra plots
-
-            % Plot of Hilbert Transform "Attractor" to see if phase is well
-            % defined
-            figure;
-            plot(real(uncutHilbertTransform), imag(uncutHilbertTransform))
-            % plot(real(hilbertTransform), imag(hilbertTransform))
-            title('HT of Channel 1')
-            ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
-            xlabel('$\mathrm{Re}(X_H)$', 'Interpreter', 'latex');
-
-            figure;
-            signal = filteredEegFullCentered(1, :);
-            frequencies = (0:channelLength-1)*(fs/channelLength);
-            fft_signal = fft(signal);
-            plot(frequencies(1:channelLength/2), abs(fft_signal(1:channelLength/2)));
-            title('FFT of Channel 1')
-            xlabel('Frequency (Hz)');
-            ylabel('Magnitude');
-
-
-        case 115 % Save the artifacts for all the recordings of the patient (S)
-            windowSizeSeconds = 10; % In seconds
-            artifactResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
-
-        case 118 % Gather phase variability for each window (V)
-            cd(metricsAndMeasuresDirectory);
-
-            for i=1:totalChannels
-                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
-                startCutIndex = secondsToCut * fs;
-                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
-                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
-                [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, hilbertTransform(1, :), windowSizeSeconds);
-                phaseVariabilityCellArray{i} = metrics;
-                if exist('channelsV', 'var') == 0
-                    channelsV = zeros(totalChannels, totalWindows);
-                    channelsM = zeros(totalChannels, totalWindows);
-                    channelsS = zeros(totalChannels, totalWindows);
-                end
-                channelsV(i, :) = metrics(1, :);
-                channelsM(i, :) = metrics(2, :);
-                channelsS(i, :) = metrics(3, :);
-            end
-            disp("Phase variability calculated for all channels!")
-            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsV, "V")
-            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsM, "M")
-            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsS, "S")
-            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, secondsToCut, totalWindows, {channelsV, channelsM, channelsS}, {'V', 'M', 'S'});
-
-            cd(visualizerDirectory);
     end
 end
 

@@ -41,8 +41,8 @@ if(any(channelsWithMoreThanHalfTrue))
 end
 
 flatlineChannels = find(channelsWithMoreThanHalfTrue);
-if(verbose)
-    disp(['Flatlines on: ', flatlineChannels]);
+if ~isempty(flatlineChannels) && verbose
+    disp(['Flatlines on: ', num2str(flatlineChannels)]);
 end
 
 % meanSegments = cell2mat(windowedSegments);
