@@ -17,7 +17,7 @@
 %   Generates subplots with heatmaps for each specified metric and displays relevant information.
 %--------------------------------------------------------------------------
 
-function DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, secondsToCut, ...
+function DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSize, ...
     totalWindows, overlapSeconds, metricMatrices, metricNames)
 
 [M, N] = size(eegFull);
@@ -31,13 +31,14 @@ end
 nameChannel = flip(nameChannel);
 metricMatrices = cellfun(@(x) flip(x), metricMatrices, 'UniformOutput', false);
 
-stepSize = windowSize - overlapSeconds;
+stepSize = windowSize - overlapSeconds; % From window start to window start
 windowStarts = (0:totalWindows-1) * stepSize;
 tickPositions = windowStarts + windowSize / 2;
 tickLabels = cell(1, length(tickPositions));
 
 for i = 1:length(tickPositions)
-    tickLabels{i} = [num2str(tickPositions(i)), ' - ', num2str(tickPositions(i) + windowSize)];
+    % tickLabels{i} = [num2str(tickPositions(i)), ' - ', num2str(tickPositions(i) + windowSize)];
+    tickLabels{i} = [num2str(windowStarts(i)), ' - ', num2str(windowStarts(i) + windowSize)];
 end
 
 figure;
@@ -51,6 +52,27 @@ set(groot,'defaulttextinterpreter',interpreter);
 set(groot,'defaultLegendInterpreter',interpreter);
 
 numMetrics = numel(metricMatrices);
+
+% Draw DANGER zones because of boundary effect
+totalDuration = floor(N / fs);
+boundaryAffectedSeconds = 0.05 * totalDuration;
+beginningBoundaryZone = boundaryAffectedSeconds;
+endingBoundaryZone = totalDuration - boundaryAffectedSeconds;
+
+% The loop searches the amount of windows affected by the boundary effect,
+% since it is simmetrical, the same number of windows are affected at the
+% tail of the signal. 
+affectedNumberOfWindows = -1;
+for i = 1:length(windowStarts)
+    if windowStarts(i) < beginningBoundaryZone
+        affectedNumberOfWindows = i;
+    else
+        break; 
+    end
+end
+
+beginningBoundaryZonePlotPosition = tickPositions(affectedNumberOfWindows);
+endingBoundaryZonePlotPosition = tickPositions(length(windowStarts) - affectedNumberOfWindows + 1);
 
 for i = 1:numMetrics
     subplot(numMetrics, 1, i);
@@ -69,23 +91,45 @@ for i = 1:numMetrics
     switch metricNames{i}
         case 'V'
             metricDescription = 'Phase Velocity Variability';
-            maxValue = 1.5;
-            minValue = 0.7;
+            %10-90
+            % minValue = 0.3058;
+            % maxValue = 1.9650;
+            %20-80
+            % minValue = 0.3209;
+            % maxValue = 1.6722;
+            %30-70
+            minValue = 0.33954;
+            maxValue = 1.2844;
         case 'M'
-            metricDescription = 'Mean Phase Variability';
-            maxValue = 0.75;
-            minValue =  0.6;
+            metricDescription = 'Mean Phase Velocity';
+            % minValue = 0.1158;
+            % maxValue = 1.6065;
+            % minValue = 0.1374;
+            % maxValue = 1.5829;
+            minValue = 0.1501;
+            maxValue = 1.5554;
         case 'S'
             metricDescription = 'Phase Velocity Std';
-            maxValue = 0.6;
-            minValue = 0.2;
+            % minValue = 0.1366;
+            % maxValue = 0.5185;
+            % minValue = 0.1584;
+            % maxValue = 0.4972;
+            minValue = 0.17713;
+            maxValue = 0.47295;
         otherwise
             metricDescription = ''; % Default case
     end
 
     title([metricDescription, ' (', metricNames{i}, ')'], 'Interpreter', interpreter, 'FontWeight', axisFontWeight, 'FontSize', titlesFontSize);
     colormap('hot');
-    % clim(gca, [minValue, maxValue]);
-end
+    clim(gca, [minValue, maxValue]);
 
+    % Draw vertical lines for the boundary zones
+    hold on;
+    line([beginningBoundaryZonePlotPosition beginningBoundaryZonePlotPosition], ...
+        ylim, 'Color',  [0 0.447 0.741], 'LineStyle', '--','LineWidth', 2); % beginning boundary zone
+    line([endingBoundaryZonePlotPosition endingBoundaryZonePlotPosition], ...
+        ylim, 'Color',  [0 0.447 0.741], 'LineStyle', '--', 'LineWidth', 2); % ending boundary zone
+    hold off;
+end
 end

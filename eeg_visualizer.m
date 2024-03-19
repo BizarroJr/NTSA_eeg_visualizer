@@ -107,18 +107,19 @@ plots(eegWindowOffset,timeCurrentWindow,patientId,seizure)
 
 fig=0;
 all=0; %Variable that states if the whole EEG is being plotted
-save=[-1,-1]; %List to save the state of the system
+stateSave=[-1,-1]; %List to save the state of the system
 ampliary=false;
 dropouts=false;
 
 %% Stuff for phase-based measures
 windowSizeSeconds = 10; % In seconds
-overlapSeconds = 3;
+overlapSeconds = 9;
 secondsToCut = 0; % In seconds
-filterType = 0; % 0-No filter, 1-LPF, 2-HPF
+filterType = 2; % 0-No filter, 1-LPF, 2-HPF
+saveMetrics = false;
 
 filteredEegFullCentered = zeros(size(eegFull));
-eegPhases = zeros(totalChannels, channelLength - 2 * (secondsToCut * fs));
+eegPhases = zeros(totalChannels, channelLength);
 eegPhasesPadded = zeros(size(eegFull));
 
 % Substract the mean to every channel
@@ -138,37 +139,31 @@ while fig==0
         case 102 % Display untrended unwrapped phase of signals (F)
 
             for i = 1:totalChannels
-                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
-                startCutIndex = secondsToCut * fs;
-                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
-                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
+                hilbertTransform = hilbert(filteredEegFullCentered(i, :));
                 phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
                 % phase = atan2(imag(hilbertTransform), real(hilbertTransform)); % Just the phase
                 eegPhases(i, :) = phase;
             end
-            eegPhasesPadded(:, (secondsToCut * fs) + 1 : end - (secondsToCut * fs)) = eegPhases;
-            plots(offset(eegPhasesPadded), time, patientId, seizure)
+            plots(offset(eegPhases), time, patientId, seizure)
 
             % Extra plots
 
-            % Plot of Hilbert Transform "Attractor" to see if phase is well
-            % defined
-            % Plot only the segment of uncutHilbertTransform between
-            % timeStart and timeEnd
-            timeStart = 16;
-            timeEnd = 17;
-            startIndex = round(timeStart * fs);
-            endIndex = round(timeEnd * fs);
-            segmentHilbertTransform = uncutHilbertTransform(startIndex:endIndex);
-
-            figure;
-            plot(real(segmentHilbertTransform), imag(segmentHilbertTransform))
-            % plot(real(hilbertTransform), imag(hilbertTransform))
-            selectedChannel = 16;
-            title(['HT of Channel ' num2str(selectedChannel)]);
-            ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
-            xlabel('$\mathrm{Re}(X_H)$', 'Interpreter', 'latex');
-
+            % % Plot of Hilbert Transform "Attractor" to see if phase is well
+            % % defined
+            % % Plot only the segment of uncutHilbertTransform between
+            % % timeStart and timeEnd
+            % timeStart = 16;
+            % timeEnd = 17;
+            % startIndex = round(timeStart * fs);
+            % endIndex = round(timeEnd * fs);
+            % segmentHilbertTransform = hilbertTransform(startIndex:endIndex);
+            % figure;
+            % plot(real(segmentHilbertTransform), imag(segmentHilbertTransform))
+            % % plot(real(hilbertTransform), imag(hilbertTransform))
+            % selectedChannel = 16;
+            % title(['HT of Channel ' num2str(selectedChannel)]);
+            % ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
+            % xlabel('$\mathrm{Re}(X_H)$', 'Interpreter', 'latex');
             % figure;
             % signal = filteredEegFullCentered(selectedChannel, :);
             % frequencies = (0:channelLength-1)*(fs/channelLength);
@@ -182,10 +177,7 @@ while fig==0
             cd(metricsAndMeasuresDirectory);
 
             for i=1:totalChannels
-                uncutHilbertTransform = hilbert(filteredEegFullCentered(i, :));
-                startCutIndex = secondsToCut * fs;
-                endCutIndex = length(uncutHilbertTransform) - (secondsToCut * fs);
-                hilbertTransform = uncutHilbertTransform(startCutIndex + 1 : endCutIndex);
+                hilbertTransform = hilbert(filteredEegFullCentered(i, :));
                 [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, hilbertTransform(1, :), windowSizeSeconds, overlapSeconds);
                 phaseVariabilityCellArray{i} = metrics;
                 if exist('channelsV', 'var') == 0
@@ -197,36 +189,69 @@ while fig==0
                 channelsM(i, :) = metrics(2, :);
                 channelsS(i, :) = metrics(3, :);
             end
+            if (saveMetrics)
+                saveDir = 'P:\WORK\David\UPF\TFM\MatFiles';
+                % Saving channelsV
+                if filterType == 0
+                    filenameV = fullfile(saveDir, 'V_NF.mat');
+                elseif filterType == 1
+                    filenameV = fullfile(saveDir, 'V_LPF.mat');
+                elseif filterType == 2
+                    filenameV = fullfile(saveDir, 'V_HPF.mat');
+                end
+                save(filenameV, 'channelsV');
+
+                % Saving channelsM
+                if filterType == 0
+                    filenameM = fullfile(saveDir, 'M_NF.mat');
+                elseif filterType == 1
+                    filenameM = fullfile(saveDir, 'M_LPF.mat');
+                elseif filterType == 2
+                    filenameM = fullfile(saveDir, 'M_HPF.mat');
+                end
+                save(filenameM, 'channelsM');
+
+                % Saving channelsS
+                if filterType == 0
+                    filenameS = fullfile(saveDir, 'S_NF.mat');
+                elseif filterType == 1
+                    filenameS = fullfile(saveDir, 'S_LPF.mat');
+                elseif filterType == 2
+                    filenameS = fullfile(saveDir, 'S_HPF.mat');
+                end
+                save(filenameS, 'channelsS');
+            end
+
             disp("Phase variability calculated for all channels!")
             % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsV, "V")
             % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsM, "M")
             % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsS, "S")
             DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, ...
-                secondsToCut, totalWindows, overlapSeconds, ...
+                totalWindows, overlapSeconds, ...
                 {channelsV, channelsM, channelsS}, {'V', 'M', 'S'});
             maxValues = max(metrics, [], 2);
             minValues = min(metrics, [], 2);
             cd(visualizerDirectory);
 
         case 1 % Cursor click
-            save(end+1)=y;
-            if save(end-1)~=-1 & ampliary==false & save(end-1)~=-3 %In case that we want to see only a part of the window (we need to click where we want the boundaries)
+            stateSave(end+1)=y;
+            if stateSave(end-1)~=-1 & ampliary==false & stateSave(end-1)~=-3 %In case that we want to see only a part of the window (we need to click where we want the boundaries)
                 ampliary=true;
-                value1=save(end);
-                value2= save(end-1);
+                value1=stateSave(end);
+                value2= stateSave(end-1);
                 if value1>value2
-                    value2=save(end);
-                    value1= save(end-1);
+                    value2=stateSave(end);
+                    value1= stateSave(end-1);
                 end
                 ylim([ value1 value2]); %The portion is plotted
             end
 
-            if save(end-1)==-3 & ampliary==false %In case we want to plot the periodogram (we need to press P and click on the desired channel)
+            if stateSave(end-1)==-3 & ampliary==false %In case we want to plot the periodogram (we need to press P and click on the desired channel)
                 marginDistanceBetweenChannels=300;
                 maximums=max(eegWindowOffset,[],2)+marginDistanceBetweenChannels; %The maximums of each channel at the current window are searched and a certain margin is added because of the offset
                 minimums=min(eegWindowOffset,[],2)-marginDistanceBetweenChannels; %The minimums of each channel at the current window are searched and a certain margin is substracted because of the offset
                 ranges=[minimums maximums]; %The ranges of each channel at the current window are between the maximum and minimum of the signal
-                selectedChannel=find(save(end)>ranges(:,1) & save(end)<ranges(:,2)); %We search the selected channel
+                selectedChannel=find(stateSave(end)>ranges(:,1) & stateSave(end)<ranges(:,2)); %We search the selected channel
                 % periodogram(eegFull(channel2,:))
                 [p, f] = periodogram(eegFull(selectedChannel, :), [], [], fs);
                 plot(f,log(p))
@@ -238,7 +263,7 @@ while fig==0
 
         case 29 % Move to the right (--> arrow)
             all=0;
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             if all==0
                 [eegWindowOffset,timeCurrentWindow]=actualizar_new(eegFullOffset,time,timeCurrentWindow,round(length(timeCurrentWindow)/2),round(length(timeCurrentWindow)/2),0); %The new eegFullOffset and time are defined
             end
@@ -262,7 +287,7 @@ while fig==0
 
         case 28 % Move to the left (<-- arrow)
             all=0;
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             if all==0
                 [eegWindowOffset,timeCurrentWindow]=actualizar_new(eegFullOffset,time,timeCurrentWindow,-round(length(timeCurrentWindow)/2),-round(length(timeCurrentWindow)/2),0);
             end
@@ -286,7 +311,7 @@ while fig==0
             end
 
         case 30 % Zoom in (up arrow)
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             maxZoomin=2000;
             if length(timeCurrentWindow)<maxZoomin %We set a maximum to zoom in
                 display('Limit of zoom in has been reached')
@@ -314,7 +339,7 @@ while fig==0
             end
 
         case 31 % Zoom out (down arrow)
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             samplesAdded=1000; %Samples added to the sides to zoom out
             [eegWindowOffset,timeCurrentWindow]=actualizar_new(eegFullOffset,time,timeCurrentWindow,-samplesAdded,samplesAdded,1);
             %New window plot
@@ -336,7 +361,7 @@ while fig==0
             end
 
         case 43 % Increase amplitude (+)
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             factorIncrease=1.5;
             [eegFull,eegFullOffset,eegWindowOffset,timeCurrentWindow]=ampliar_amplitud(eegFull,time,timeCurrentWindow,factorIncrease);
             if dropouts==false
@@ -357,7 +382,7 @@ while fig==0
             end
 
         case 45 % Decrease amplitude (-)
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             factorDecrease=0.5;
             [eegFull,eeg_new,eegWindowOffset,timeCurrentWindow]=ampliar_amplitud(eegFull,time,timeCurrentWindow,factorDecrease);%The new EEG contains the changes in amplitude
             if dropouts==false
@@ -377,14 +402,14 @@ while fig==0
             end
 
         case 105  %Eliminate the ylim --> the ampliary (I)
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             if ampliary==true
                 ampliary=false;
                 ylim([ 0 max(max(eegWindowOffset))+500]); %The new ylim is setted
             end
 
         case 99 % Plot the EEG complete (C)
-            save(end+1)=-1;
+            stateSave(end+1)=-1;
             all=1;
             if dropouts==false
                 if ampliary==true %In case that we are only plotting some channels
@@ -404,7 +429,7 @@ while fig==0
             end
 
         case 112 %periodogram (P + click on the channel that you want)
-            save(end+1)=-3;
+            stateSave(end+1)=-3;
 
         case 114 % Return to the original amplitudes (R)
             % %Return the eegFullOffset variables to the original ones

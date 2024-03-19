@@ -58,57 +58,61 @@ time = 0:1/fs:(1/fs) * (size(fullEeg, 2) - 1);
 offsetedEeg = offset(fullEeg);
 eegToShow= offsetedEeg(:, 1:samplesToVisualize);
 
+%% SPIKE DETECTOR
+
+
+
 %% EEG UNWRAPPED & DETRENDED PHASE
 
-channelToVisualize = 1;
-channelEeg = fullEeg(channelToVisualize, :);
-
-% Part of signal
-
-% time1 = 60;
-% time2 = 70;
-% startSample = time1*fs;
-% endSample = time2*fs;
-% samples=startSample:endSample;
-% time = linspace(time1, time2, length(samples));
-%
-% uncutHilbertTransform = hilbert(channelEeg(samples));
-% phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
-
-% Full signal
-
-uncutHilbertTransform = hilbert(channelEeg);
-hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
-phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform)))) ;
-regularPhase = atan2(imag(hilbertTransform), real(hilbertTransform));
-% phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
-time = (1:length(channelEeg)) / fs;
-
-figure;
-plot(real(uncutHilbertTransform), imag(uncutHilbertTransform))
-ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
-xlabel('$\mathrm{Re}(X_H)$', 'Interpreter', 'latex');
-%plot(regularPhase)
+% channelToVisualize = 1;
+% channelEeg = fullEeg(channelToVisualize, :);
+% 
+% % Part of signal
+% 
+% % time1 = 60;
+% % time2 = 70;
+% % startSample = time1*fs;
+% % endSample = time2*fs;
+% % samples=startSample:endSample;
+% % time = linspace(time1, time2, length(samples));
+% %
+% % uncutHilbertTransform = hilbert(channelEeg(samples));
+% % phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
+% 
+% % Full signal
+% 
+% uncutHilbertTransform = hilbert(channelEeg);
+% hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
+% phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform)))) ;
+% regularPhase = atan2(imag(hilbertTransform), real(hilbertTransform));
+% % phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
+% time = (1:length(channelEeg)) / fs;
+% 
 % figure;
-% plot(time, phaseUncut)
-% % plot(time, uncutHilbertTransform)
-% ylabel('Phase (radians)');
-% xlabel('Time (s)');
-% title(['Patient ' num2str(patientId) ', Recording ' num2str(dataRecord) ', Channel ' num2str(channelToVisualize)]);
-
-figure;
-channelLength = N;
-channelMeans = mean(fullEeg, 2);
-eegFullCentered = fullEeg - channelMeans;
-signal = eegFullCentered(1, :);
-frequencies = (0:channelLength-1)*(fs/channelLength);
-fft_signal = fft(signal);
-plot(frequencies(1:channelLength/2), abs(fft_signal(1:channelLength/2)));
-title('FFT of Channel 1')
-xlabel('Frequency (Hz)');
-ylabel('Magnitude');
-
-axis tight;
+% plot(real(uncutHilbertTransform), imag(uncutHilbertTransform))
+% ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
+% xlabel('$\mathrm{Re}(X_H)$', 'Interpreter', 'latex');
+% %plot(regularPhase)
+% % figure;
+% % plot(time, phaseUncut)
+% % % plot(time, uncutHilbertTransform)
+% % ylabel('Phase (radians)');
+% % xlabel('Time (s)');
+% % title(['Patient ' num2str(patientId) ', Recording ' num2str(dataRecord) ', Channel ' num2str(channelToVisualize)]);
+% 
+% figure;
+% channelLength = N;
+% channelMeans = mean(fullEeg, 2);
+% eegFullCentered = fullEeg - channelMeans;
+% signal = eegFullCentered(1, :);
+% frequencies = (0:channelLength-1)*(fs/channelLength);
+% fft_signal = fft(signal);
+% plot(frequencies(1:channelLength/2), abs(fft_signal(1:channelLength/2)));
+% title('FFT of Channel 1')
+% xlabel('Frequency (Hz)');
+% ylabel('Magnitude');
+% 
+% axis tight;
 
 %% FLATLINE DETECTOR
 
@@ -161,7 +165,7 @@ axis tight;
 
 %% NEW DROPOUT DETECTOR SANDBOX
 
-[dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs);
+% [dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs);
 
 %% PLOTS FOR DROPOUT
 
