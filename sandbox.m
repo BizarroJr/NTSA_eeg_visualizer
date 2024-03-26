@@ -9,12 +9,12 @@ metricsAndMeasuresDirectory = visualizerDirectory + "Metrics_and_measures";
 %% Data under analysis
 % patientId = "11";
 % dataRecord = "53";
-patientId = "11";
-dataRecord = "2";
+% patientId = "11";
+% dataRecord = "2";
 % patientId = "8";
 % dataRecord = "057";
 patientId = "11";
-seizure = "113";
+dataRecord = "113";
 
 %% Load data
 dataDirectory = fullfile(baseDirectory, "Data", "Seizure_Data_" + patientId);
@@ -60,15 +60,66 @@ eegToShow= offsetedEeg(:, 1:samplesToVisualize);
 
 %% SPIKE DETECTOR
 
+currentChannel = 16;
+channelSignal = fullEeg(currentChannel, :);
+absoluteSignalDerivative = abs(diff(channelSignal));
 
+histogramResolution = 200;
+[binCount, binEdges] = histcounts(absoluteSignalDerivative, histogramResolution);
+
+% Calculate the mean and standard deviation of the channel
+signal = channelSignal;
+channelMean = mean(signal);
+channelStd = std(signal);
+thresholdSigma = 4;
+threshold = channelMean + thresholdSigma * channelStd;
+deviantIndices = find(signal > threshold);
+numDeviantValues = numel(deviantIndices);
+
+disp(['Number of values deviating more than ', num2str(thresholdSigma), ' sigma: ', num2str(numDeviantValues)]);
+figure;
+hold on;
+plot(signal)
+plot(deviantIndices, signal(deviantIndices), 'ro', 'MarkerSize', 10);
+hold off;
+
+figure;
+hold on;
+histogram(signal, histogramResolution);
+% title('Histogram of smoothed difference', 'FontSize', 16);
+xlabel('Bins', 'FontSize', 16);
+ylabel('Frequency', 'FontSize', 16);
+axis('tight');
+binWidth = binEdges(2) - binEdges(1);
+thresholdX = threshold + binWidth / 2;
+plot([thresholdX, thresholdX], [0, max(binCount)], 'r--', 'LineWidth', 2);
+plot([-thresholdX, -thresholdX], [0, max(binCount)], 'r--', 'LineWidth', 2);
+hold off;
+
+%% STATISTICAL TEST
+ 
+% figure;
+% data = channelSignal;
+% qqplot(data); % Q-Q plot
+% title('Q-Q Plot');
+% 
+% % Statistical Test
+% alpha = 0.05; % Significance level
+% [h, p] = swtest(data); % Shapiro-Wilk test
+% disp(['Shapiro-Wilk Test p-value: ', num2str(p)]);
+% if p > alpha
+%     disp('The data may come from a normal distribution.');
+% else
+%     disp('The data may not come from a normal distribution.');
+% end
 
 %% EEG UNWRAPPED & DETRENDED PHASE
 
 % channelToVisualize = 1;
 % channelEeg = fullEeg(channelToVisualize, :);
-% 
+%
 % % Part of signal
-% 
+%
 % % time1 = 60;
 % % time2 = 70;
 % % startSample = time1*fs;
@@ -78,16 +129,16 @@ eegToShow= offsetedEeg(:, 1:samplesToVisualize);
 % %
 % % uncutHilbertTransform = hilbert(channelEeg(samples));
 % % phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
-% 
+%
 % % Full signal
-% 
+%
 % uncutHilbertTransform = hilbert(channelEeg);
 % hilbertTransform = uncutHilbertTransform(0.05*length(uncutHilbertTransform):0.95*length(uncutHilbertTransform));
 % phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform)))) ;
 % regularPhase = atan2(imag(hilbertTransform), real(hilbertTransform));
 % % phaseUncut = detrend(unwrap(atan2(imag(uncutHilbertTransform), real(uncutHilbertTransform)))) ;
 % time = (1:length(channelEeg)) / fs;
-% 
+%
 % figure;
 % plot(real(uncutHilbertTransform), imag(uncutHilbertTransform))
 % ylabel('$\mathrm{Im}(X_H)$', 'Interpreter', 'latex');
@@ -99,7 +150,7 @@ eegToShow= offsetedEeg(:, 1:samplesToVisualize);
 % % ylabel('Phase (radians)');
 % % xlabel('Time (s)');
 % % title(['Patient ' num2str(patientId) ', Recording ' num2str(dataRecord) ', Channel ' num2str(channelToVisualize)]);
-% 
+%
 % figure;
 % channelLength = N;
 % channelMeans = mean(fullEeg, 2);
@@ -111,7 +162,7 @@ eegToShow= offsetedEeg(:, 1:samplesToVisualize);
 % title('FFT of Channel 1')
 % xlabel('Frequency (Hz)');
 % ylabel('Magnitude');
-% 
+%
 % axis tight;
 
 %% FLATLINE DETECTOR

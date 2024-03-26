@@ -1,4 +1,4 @@
-function [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, eegChannel, windowSizeSeconds, overlapSeconds)
+function metrics = DV_EEGPhaseVelocityAnalyzer(fs, eegChannel, windowSizeSeconds, overlapSeconds)
 
 if(overlapSeconds >= windowSizeSeconds)
     error('Overlap cannot be greater than the window size. Please re-adjust the parameters.');

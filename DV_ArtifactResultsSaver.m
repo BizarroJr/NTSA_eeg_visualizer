@@ -17,7 +17,7 @@
 %--------------------------------------------------------------------------
 
 
-function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
+function DV_ArtifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
 
     % Validate input parameters
     if fs <= 0
@@ -84,7 +84,7 @@ function artifactResultsSaverResultsSaver(dataDirectory, visualizerDirectory, fs
     disp(['Total dropout affected files: ', num2str(totalDropoutAffectedRecordings), ' out of ', num2str(numMatFiles-totalMissingFiles), ' (', num2str((totalDropoutAffectedRecordings/numMatFiles)*100), '%)']);
     disp(['Total flatline affected files: ', num2str(totalFlatlineAffectedRecordings), ' out of ', num2str(numMatFiles-totalMissingFiles), ' (', num2str((totalFlatlineAffectedRecordings/numMatFiles)*100), '%)']);
     disp(['Number of missing files: ', num2str(totalMissingFiles)]);
-    filename = sprintf('Dropouts_of_Patient_%d_V3.xlsx', str2double(patientId));
+    filename = sprintf('Artifact_diagnostics_of_patient_%d.xlsx', str2double(patientId));
     cd(dataDirectory);
     
     % Save the matrix to the Excel file

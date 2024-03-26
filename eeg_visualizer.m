@@ -3,14 +3,24 @@ clc;
 close all;
 
 %% Data under analysis
+% STRONG SEIZURES
+% patientId = "8";
+% seizure = "47";
+patientId = "11";
+seizure = "57";
 % patientId = "11";
 % seizure = "113";
-patientId = "8";
-seizure = "47";
 % patientId = "11";
-% seizure = "57";
-patientId = "11";
-seizure = "113";
+% seizure = "74";
+% patientId = "2";
+% seizure = "12";
+
+% MILD SEIZURES
+% patientId = "11";
+% seizure = "90";
+% patientId = "7";
+% seizure = "13";
+
 user = "David"; % Change your name and define the way to load the eeg accordingly to your preferences
 
 %% Load recording
@@ -114,8 +124,7 @@ dropouts=false;
 %% Stuff for phase-based measures
 windowSizeSeconds = 10; % In seconds
 overlapSeconds = 9;
-secondsToCut = 0; % In seconds
-filterType = 2; % 0-No filter, 1-LPF, 2-HPF
+filterType = 1; % 1-No filter, 2-LPF, 3-HPF
 saveMetrics = false;
 
 filteredEegFullCentered = zeros(size(eegFull));
@@ -132,6 +141,13 @@ for i = 1:totalChannels
     filteredChannel = DV_BandPassFilter(channelData, fs, filterType);
     filteredEegFullCentered(i, :) = filteredChannel;
 end
+
+% Obtain number of total windows after windowing
+windowSizeSamples = windowSizeSeconds * fs;
+overlapSamples = fs * overlapSeconds;
+totalWindows = floor((length(eegFull(1, :)) - windowSizeSamples) / (windowSizeSamples - overlapSamples)) + 1;
+
+%% Different keyboard functions
 
 while fig==0
     [x,y,button] = ginput(1);
@@ -174,63 +190,57 @@ while fig==0
             % ylabel('Magnitude');
 
         case 118 % Gather phase variability for each window (V)
-            cd(metricsAndMeasuresDirectory);
+       
+            % Obtention of limits for dynamic coloring of the metrics
+            processedEEGs = zeros(size(eegFull, 1), size(eegFull, 2), 3);
+            metricsClims = {};
+            channelsV = zeros(totalChannels, totalWindows, 3);
+            channelsM = zeros(totalChannels, totalWindows, 3);
+            channelsS = zeros(totalChannels, totalWindows, 3);
 
-            for i=1:totalChannels
-                hilbertTransform = hilbert(filteredEegFullCentered(i, :));
-                [metrics, totalWindows] = DV_EEGPhaseVelocityAnalyzer(fs, hilbertTransform(1, :), windowSizeSeconds, overlapSeconds);
-                phaseVariabilityCellArray{i} = metrics;
-                if exist('channelsV', 'var') == 0
-                    channelsV = zeros(totalChannels, totalWindows);
-                    channelsM = zeros(totalChannels, totalWindows);
-                    channelsS = zeros(totalChannels, totalWindows);
+            % 1-No filter, 2-LPF, 3-HPF
+            for filterApplied=1:3
+                cd(visualizerDirectory);
+                % Filter data
+                for i = 1:totalChannels
+                    channelData = eegFullCentered(i, :);
+                    processedEEGs(i, :, filterApplied) = DV_BandPassFilter(channelData, fs, filterApplied);
                 end
-                channelsV(i, :) = metrics(1, :);
-                channelsM(i, :) = metrics(2, :);
-                channelsS(i, :) = metrics(3, :);
-            end
-            if (saveMetrics)
-                saveDir = 'P:\WORK\David\UPF\TFM\MatFiles';
-                % Saving channelsV
-                if filterType == 0
-                    filenameV = fullfile(saveDir, 'V_NF.mat');
-                elseif filterType == 1
-                    filenameV = fullfile(saveDir, 'V_LPF.mat');
-                elseif filterType == 2
-                    filenameV = fullfile(saveDir, 'V_HPF.mat');
-                end
-                save(filenameV, 'channelsV');
 
-                % Saving channelsM
-                if filterType == 0
-                    filenameM = fullfile(saveDir, 'M_NF.mat');
-                elseif filterType == 1
-                    filenameM = fullfile(saveDir, 'M_LPF.mat');
-                elseif filterType == 2
-                    filenameM = fullfile(saveDir, 'M_HPF.mat');
+                % Obtain metrics
+                cd(metricsAndMeasuresDirectory);
+                for i=1:totalChannels
+                    hilbertTransform = hilbert(processedEEGs(i, :, filterApplied));
+                    metrics = DV_EEGPhaseVelocityAnalyzer(fs, hilbertTransform(1, :), windowSizeSeconds, overlapSeconds);
+                    channelsV(i, :, filterApplied) = metrics(1, :);
+                    channelsM(i, :, filterApplied) = metrics(2, :);
+                    channelsS(i, :, filterApplied) = metrics(3, :);
                 end
-                save(filenameM, 'channelsM');
+                metricsV_1D = reshape(channelsV, [], 1);
+                metricsM_1D = reshape(channelsM, [], 1);
+                metricsS_1D = reshape(channelsS, [], 1);
 
-                % Saving channelsS
-                if filterType == 0
-                    filenameS = fullfile(saveDir, 'S_NF.mat');
-                elseif filterType == 1
-                    filenameS = fullfile(saveDir, 'S_LPF.mat');
-                elseif filterType == 2
-                    filenameS = fullfile(saveDir, 'S_HPF.mat');
-                end
-                save(filenameS, 'channelsS');
+                % Obtain limit percentiles from each metric
+                lowerPercentile = 10;
+                upperPercentile = 90;
+
+                [minValue_V, maxValue_V] = deal(prctile(metricsV_1D, lowerPercentile), prctile(metricsV_1D, upperPercentile));
+                [minValue_M, maxValue_M] = deal(prctile(metricsM_1D, lowerPercentile), prctile(metricsM_1D, upperPercentile));
+                [minValue_S, maxValue_S] = deal(prctile(metricsS_1D, lowerPercentile), prctile(metricsS_1D, upperPercentile));
+                metricsClims = { [minValue_V, maxValue_V], [minValue_M, maxValue_M], [minValue_S, maxValue_S] };
             end
 
+            for filterApplied = 1:3
+                metricMatrices = {channelsV(:, :, filterApplied), channelsM(:, :, filterApplied), channelsS(:, :, filterApplied)};
+                DV_EEG_PBMPlotter(eegFull, fs, windowSizeSeconds, totalWindows, ...
+                    overlapSeconds, metricMatrices, {'V', 'M', 'S'}, metricsClims, filterApplied);
+            end
+        
             disp("Phase variability calculated for all channels!")
-            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsV, "V")
-            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsM, "M")
-            % DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, totalWindows, channelsS, "S")
-            DV_EEGPhaseVelocityPlotter(eegFull, fs, windowSizeSeconds, ...
-                totalWindows, overlapSeconds, ...
-                {channelsV, channelsM, channelsS}, {'V', 'M', 'S'});
-            maxValues = max(metrics, [], 2);
-            minValues = min(metrics, [], 2);
+            % metricMatrices = {channelsV(:, :, filterType), channelsM(:, :, filterType), channelsS(:, :, filterType)};
+            % DV_EEG_PBMPlotter(eegFull, fs, windowSizeSeconds, totalWindows, ...
+            %     overlapSeconds, metricMatrices, {'V', 'M', 'S'}, metricsClims, filterType);
+
             cd(visualizerDirectory);
 
         case 1 % Cursor click
@@ -484,7 +494,7 @@ while fig==0
 
         case 115 % Save the artifacts for all the recordings of the patient (S)
             windowSizeSeconds = 10; % In seconds
-            artifactResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
+             DV_ArtifactResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
 
         case 101 % Eliminate the dropouts in the plot (E)
             dropouts=false;
