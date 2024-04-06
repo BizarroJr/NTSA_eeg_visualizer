@@ -6,20 +6,25 @@ close all;
 % STRONG SEIZURES
 % patientId = "8";
 % seizure = "47";
-patientId = "11";
-seizure = "57";
+% patientId = "11";
+% seizure = "57";
 % patientId = "11";
 % seizure = "113";
 % patientId = "11";
 % seizure = "74";
 % patientId = "2";
 % seizure = "12";
+% patientId = "11";
+% seizure = "269";
 
 % MILD SEIZURES
 % patientId = "11";
 % seizure = "90";
 % patientId = "7";
 % seizure = "13";
+
+patientId = "1";
+seizure = "24";
 
 user = "David"; % Change your name and define the way to load the eeg accordingly to your preferences
 
@@ -126,6 +131,7 @@ windowSizeSeconds = 10; % In seconds
 overlapSeconds = 9;
 filterType = 1; % 1-No filter, 2-LPF, 3-HPF
 saveMetrics = false;
+detrendAndUnwrap = true; % When plotting phase (press F)
 
 filteredEegFullCentered = zeros(size(eegFull));
 eegPhases = zeros(totalChannels, channelLength);
@@ -152,14 +158,18 @@ totalWindows = floor((length(eegFull(1, :)) - windowSizeSamples) / (windowSizeSa
 while fig==0
     [x,y,button] = ginput(1);
     switch button
-        case 102 % Display untrended unwrapped phase of signals (F)
+        case 102 % Display phase of signals (F)
 
             for i = 1:totalChannels
                 hilbertTransform = hilbert(filteredEegFullCentered(i, :));
-                phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
-                % phase = atan2(imag(hilbertTransform), real(hilbertTransform)); % Just the phase
+                if(detrendAndUnwrap)
+                    phase = detrend(unwrap(atan2(imag(hilbertTransform), real(hilbertTransform))));
+                else
+                    phase = atan2(imag(hilbertTransform), real(hilbertTransform)); % Just the phase
+                end
                 eegPhases(i, :) = phase;
             end
+
             plots(offset(eegPhases), time, patientId, seizure)
 
             % Extra plots

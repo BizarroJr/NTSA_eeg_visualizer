@@ -15,6 +15,8 @@
 %
 % OUTPUTS:
 %   Generates subplots with heatmaps for each specified metric and displays relevant information.
+% AUTHOR:
+%   David Vizcarro Carretero
 %--------------------------------------------------------------------------
 
 function DV_EEG_PBMPlotter(eegFull, fs, windowSize, totalWindows, overlapSeconds, metricMatrices, metricNames, metricsClims, filterApplied)
@@ -40,7 +42,7 @@ end
 
 numMetrics = numel(metricMatrices);
 
-%% AUXILIARY PAINT POINTS CODE
+%% Auxiliary zones extraction
 
 % Establish DANGER zones because of boundary effect
 totalDuration = floor(channelLength / fs);
@@ -73,7 +75,7 @@ seizureStartBeginningPlotPosition = seizureStartTickPositions(1);
 seizureStartEndingPlotPosition = seizureStartTickPositions(end);
 seizureEndBeginningPlotPosition = seizureEndTickPositions(1);
 
-tickDecimateFactor = 3;
+tickDecimateFactor = 1;
 tickPositions = tickPositions(1:tickDecimateFactor:end);
 tickLabels = tickLabels(1:tickDecimateFactor:end);
 
