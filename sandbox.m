@@ -14,7 +14,7 @@ metricsAndMeasuresDirectory = visualizerDirectory + "Metrics_and_measures";
 % patientId = "8";
 % dataRecord = "057";
 patientId = "11";
-dataRecord = "113";
+dataRecord = "2";
 
 %% Load data
 dataDirectory = fullfile(baseDirectory, "Data", "Seizure_Data_" + patientId);
@@ -59,42 +59,42 @@ offsetedEeg = offset(fullEeg);
 eegToShow= offsetedEeg(:, 1:samplesToVisualize);
 
 %% SPIKE DETECTOR
-
-currentChannel = 16;
-channelSignal = fullEeg(currentChannel, :);
-absoluteSignalDerivative = abs(diff(channelSignal));
-
-histogramResolution = 200;
-[binCount, binEdges] = histcounts(absoluteSignalDerivative, histogramResolution);
-
-% Calculate the mean and standard deviation of the channel
-signal = channelSignal;
-channelMean = mean(signal);
-channelStd = std(signal);
-thresholdSigma = 4;
-threshold = channelMean + thresholdSigma * channelStd;
-deviantIndices = find(signal > threshold);
-numDeviantValues = numel(deviantIndices);
-
-disp(['Number of values deviating more than ', num2str(thresholdSigma), ' sigma: ', num2str(numDeviantValues)]);
-figure;
-hold on;
-plot(signal)
-plot(deviantIndices, signal(deviantIndices), 'ro', 'MarkerSize', 10);
-hold off;
-
-figure;
-hold on;
-histogram(signal, histogramResolution);
-% title('Histogram of smoothed difference', 'FontSize', 16);
-xlabel('Bins', 'FontSize', 16);
-ylabel('Frequency', 'FontSize', 16);
-axis('tight');
-binWidth = binEdges(2) - binEdges(1);
-thresholdX = threshold + binWidth / 2;
-plot([thresholdX, thresholdX], [0, max(binCount)], 'r--', 'LineWidth', 2);
-plot([-thresholdX, -thresholdX], [0, max(binCount)], 'r--', 'LineWidth', 2);
-hold off;
+% 
+% currentChannel = 16;
+% channelSignal = fullEeg(currentChannel, :);
+% absoluteSignalDerivative = abs(diff(channelSignal));
+% 
+% histogramResolution = 200;
+% [binCount, binEdges] = histcounts(absoluteSignalDerivative, histogramResolution);
+% 
+% % Calculate the mean and standard deviation of the channel
+% signal = channelSignal;
+% channelMean = mean(signal);
+% channelStd = std(signal);
+% thresholdSigma = 4;
+% threshold = channelMean + thresholdSigma * channelStd;
+% deviantIndices = find(signal > threshold);
+% numDeviantValues = numel(deviantIndices);
+% 
+% disp(['Number of values deviating more than ', num2str(thresholdSigma), ' sigma: ', num2str(numDeviantValues)]);
+% figure;
+% hold on;
+% plot(signal)
+% plot(deviantIndices, signal(deviantIndices), 'ro', 'MarkerSize', 10);
+% hold off;
+% 
+% figure;
+% hold on;
+% histogram(signal, histogramResolution);
+% % title('Histogram of smoothed difference', 'FontSize', 16);
+% xlabel('Bins', 'FontSize', 16);
+% ylabel('Frequency', 'FontSize', 16);
+% axis('tight');
+% binWidth = binEdges(2) - binEdges(1);
+% thresholdX = threshold + binWidth / 2;
+% plot([thresholdX, thresholdX], [0, max(binCount)], 'r--', 'LineWidth', 2);
+% plot([-thresholdX, -thresholdX], [0, max(binCount)], 'r--', 'LineWidth', 2);
+% hold off;
 
 %% STATISTICAL TEST
  
@@ -216,73 +216,60 @@ hold off;
 
 %% NEW DROPOUT DETECTOR SANDBOX
 
-% [dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs);
+[dropoutStartingPoints, dropoutEndingPoints, totalDropouts, totalDropoutTime, dropoutRatio] = dropoutDetector(fullEeg, fs);
 
-%% PLOTS FOR DROPOUT
+testChannel = 7;
+singleEegSignal = fullEeg(testChannel, :);
 
-% testChannel = 7;
-% singleEegSignal = fullEeg(testChannel, :);
-%
-% % Intial variable parameters
-% histogramResolution = 500;
-% differenceThreshold = 10;
-% averagingWindowLength = 10;
-% binsInUse = 2;
-%
-% singleEegSignal = fullEeg(testChannel, :);
-% eegSignalDerivative = diff(singleEegSignal);
-% absoluteDerivative = abs(eegSignalDerivative);
-% averagedDerivative = movmean(absoluteDerivative, averagingWindowLength);
-% [binCount, binEdges] = histcounts(averagedDerivative, histogramResolution);
-% binThreshold = binEdges(binsInUse);
-%
-% % Plot the single EEG signal
-% subplot(3, 1, 1);
-% plot(singleEegSignal);
-% % title('Original signal', 'FontSize', 16);
-% xlabel('Time (s)', 'FontSize', 16);
-% ylabel('Amplitude (mV)', 'FontSize', 16);
-% xticklabels(get(gca, 'xtick') / 400);
-%
-% % % Plot the derivative of the single EEG signal
-% % subplot(4, 1, 2);
-% % plot(eegSignalDerivative);
-% % title('Derivative of EEG Signal');
-% % xlabel('Time (s)');
-% % ylabel('Amplitude (mV)');
-% % xticklabels(get(gca, 'xtick') / 400);
-%
-% % Plot the absolute derivative
-% subplot(3, 1, 2);
-% plot(absoluteDerivative);
-% % title('Smoothed difference', 'FontSize', 16);
-% xlabel('Time (s)', 'FontSize', 16);
-% ylabel('Amplitude (mV)', 'FontSize', 16);
-% xticklabels(get(gca, 'xtick') / 400);
-%
-% % Plot the histogram of the averaged derivative
-% subplot(3, 1, 3);
-% histogram(averagedDerivative, histogramResolution);
-% % title('Histogram of smoothed difference', 'FontSize', 16);
-% xlabel('Bins', 'FontSize', 16);
-% ylabel('Frequency', 'FontSize', 16);
-%
-% axis("tight")
-%
-% % Create a figure to display the plot
-% figure;
-%
-% % Plot the original signal
-% plot(singleEegSignal);
-% title('Original EEG Signal', 'FontSize', 16);
-% xlabel('Time (s)', 'FontSize', 16);
-% ylabel('Amplitude (mV)', 'FontSize', 16);
-% xticklabels(get(gca, 'xtick') / 400);
-%
-% % Highlight samples falling inside the first three bins with red color
-% hold on;
-% dropoutIndices = find(abs(averagedDerivative) < binThreshold);
-% dropoutSamples = singleEegSignal(dropoutIndices);
-% plot(dropoutIndices, dropoutSamples, 'r.', 'MarkerSize', 10);
-% hold off;
+% Intial variable parameters
+histogramResolution = 500;
+differenceThreshold = 10;
+averagingWindowLength = 10;
+binsInUse = 2;
 
+singleEegSignal = fullEeg(testChannel, :);
+eegSignalDerivative = diff(singleEegSignal);
+absoluteDerivative = abs(eegSignalDerivative);
+averagedDerivative = movmean(absoluteDerivative, averagingWindowLength);
+[binCount, binEdges] = histcounts(averagedDerivative, histogramResolution);
+binThreshold = binEdges(binsInUse);
+
+% Font size variables
+fontSize = 16;
+axesFontSize = 18;
+
+% Plot the single EEG signal
+subplot(3, 1, 1);
+plot(singleEegSignal);
+xlabel('Time (s)', 'FontSize', fontSize);
+ylabel('Amplitude (mV)', 'FontSize', fontSize);
+set(gca, 'FontSize', axesFontSize);
+xticklabels(get(gca, 'xtick') / 400);
+
+% Plot the absolute derivative
+subplot(3, 1, 2);
+plot(absoluteDerivative);
+xlabel('Time (s)', 'FontSize', fontSize);
+ylabel('$\hat{C}_7$ (mV)', 'Interpreter', 'latex', 'FontSize', fontSize);
+set(gca, 'FontSize', axesFontSize);
+xticklabels(get(gca, 'xtick') / 400);
+
+% Plot the histogram of the averaged derivative
+subplot(3, 1, 3);
+histogram(averagedDerivative, 50);
+xlabel('$\hat{C}_7$ (mV)', 'Interpreter', 'latex', 'FontSize', fontSize);
+ylabel('Frequency', 'FontSize', fontSize);
+set(gca, 'FontSize', axesFontSize);
+
+axis("tight")
+
+% Create a figure to display the plot
+figure;
+
+% Plot the original signal
+plot(singleEegSignal);
+title('Original EEG Signal', 'FontSize', fontSize);
+xlabel('Time (s)', 'FontSize', fontSize);
+ylabel('Amplitude (mV)', 'FontSize', fontSize);
+set(gca, 'FontSize', axesFontSize);
+xticklabels(get(gca, 'xtick') / 400);

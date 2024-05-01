@@ -23,8 +23,8 @@ close all;
 % patientId = "7";
 % seizure = "13";
 
-patientId = "1";
-seizure = "24";
+patientId = "11";
+seizure = "269";
 
 user = "David"; % Change your name and define the way to load the eeg accordingly to your preferences
 
@@ -80,6 +80,9 @@ end
 %   - I Key (Button 105):
 %     - Eliminates the y-axis limit, allowing the plot to auto-scale.
 %
+%   - A Key (Button 97):
+%     - Saves all the artifacts found in the patient. (Dropouts)
+%
 %   - C Key (Button 99):
 %     - Plots the complete EEG signal.
 %
@@ -90,7 +93,7 @@ end
 %     - Plots dropouts.
 %
 %   - S Key (Button 115):
-%     - Saves all the artifacts found in the patient. (Dropouts)
+%     - pectrogram analysis of each channel
 %
 %   - V Key (Button 118):
 %     - Computes Phase Variability Measures. (V, M, S)
@@ -158,6 +161,9 @@ totalWindows = floor((length(eegFull(1, :)) - windowSizeSamples) / (windowSizeSa
 while fig==0
     [x,y,button] = ginput(1);
     switch button
+        case 115 % Display Spectrogram of each channel (S)
+            DV_SpectrogramAnalysis(eegFullCentered, fs, channelLength, patientId, seizure);
+
         case 102 % Display phase of signals (F)
 
             for i = 1:totalChannels
@@ -246,7 +252,8 @@ while fig==0
                     overlapSeconds, metricMatrices, {'V', 'M', 'S'}, metricsClims, filterApplied);
             end
         
-            disp("Phase variability calculated for all channels!")
+            disp("Phase-based metrics calculated!")
+
             % metricMatrices = {channelsV(:, :, filterType), channelsM(:, :, filterType), channelsS(:, :, filterType)};
             % DV_EEG_PBMPlotter(eegFull, fs, windowSizeSeconds, totalWindows, ...
             %     overlapSeconds, metricMatrices, {'V', 'M', 'S'}, metricsClims, filterType);
@@ -427,6 +434,9 @@ while fig==0
                 ampliary=false;
                 ylim([ 0 max(max(eegWindowOffset))+500]); %The new ylim is setted
             end
+        case 97 % Save the artifacts for all the recordings of the patient (A)
+            windowSizeSeconds = 10; % In seconds
+             DV_ArtifactResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
 
         case 99 % Plot the EEG complete (C)
             stateSave(end+1)=-1;
@@ -502,9 +512,6 @@ while fig==0
             end
             % end
 
-        case 115 % Save the artifacts for all the recordings of the patient (S)
-            windowSizeSeconds = 10; % In seconds
-             DV_ArtifactResultsSaver(dataDirectory, visualizerDirectory, fs, windowSizeSeconds, patientId)
 
         case 101 % Eliminate the dropouts in the plot (E)
             dropouts=false;
